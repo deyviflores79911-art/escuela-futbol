@@ -117,7 +117,23 @@ def crear_app():
     return app
 
 
-app = crear_app()
+def app_sin_configurar():
+    """En Vercel, si faltan variables: una página clara con las que faltan (en vez de un error 500)."""
+    aviso = Flask(__name__)
+
+    @aviso.route("/", defaults={"ruta": ""})
+    @aviso.route("/<path:ruta>")
+    def falta_configurar(ruta):
+        lista = "".join(f"<li><code>{v}</code></li>" for v in config.FALTAN)
+        return (f"<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
+                f"<title>Falta configurar</title><body style='font-family:sans-serif;max-width:560px;margin:2rem auto;padding:0 1rem'>"
+                f"<h1>Falta configurar la app en Vercel</h1><p>En Vercel → tu proyecto → <b>Settings → Environment "
+                f"Variables</b>, agrega:</p><ul>{lista}</ul><p>Después ve a <b>Deployments</b> → ⋯ → <b>Redeploy</b>.</p>"
+                f"<p>Los valores están explicados en <code>app_escuela/README.md</code>.</p></body>", 503)
+    return aviso
+
+
+app = app_sin_configurar() if config.FALTAN else crear_app()
 
 def _ip_en_la_red():
     """IP de esta computadora en la red WiFi (la que se escribe en el celular)."""

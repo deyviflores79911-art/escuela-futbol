@@ -24,7 +24,12 @@ BD_SERVIDOR = os.environ.get("BD_SERVIDOR", "")          # ej. escuela-fortaleza
 BD_NOMBRE = os.environ.get("BD_NOMBRE", "Sistema_EscuelasDeportivas")
 BD_USUARIO = os.environ.get("BD_USUARIO", "")
 BD_CLAVE = os.environ.get("BD_CLAVE", "")
-EN_LA_NUBE = bool(BD_SERVIDOR)
+EN_VERCEL = os.environ.get("VERCEL") == "1"     # Vercel pone esta variable sola
+EN_LA_NUBE = bool(BD_SERVIDOR) or EN_VERCEL
+
+# Variables que faltan configurar en Vercel (si falta alguna, la app muestra cuáles en vez de caerse)
+VARIABLES_NUBE = ["BD_SERVIDOR", "BD_NOMBRE", "BD_USUARIO", "BD_CLAVE", "CLAVE_SECRETA"]
+FALTAN = [v for v in VARIABLES_NUBE if not os.environ.get(v)] if EN_LA_NUBE else []
 
 # ---- Base local (autenticación de Windows)
 CADENA_CONEXION = (
@@ -62,7 +67,7 @@ def _clave_secreta():
     if os.environ.get("CLAVE_SECRETA"):
         return os.environ["CLAVE_SECRETA"]
     if EN_LA_NUBE:
-        raise RuntimeError("Falta la variable CLAVE_SECRETA en Vercel (Settings → Environment Variables).")
+        return secrets.token_hex(32)   # solo para mostrar la página "falta configurar" (ver FALTAN)
     archivo = CARPETA / ".clave_secreta"
     if not archivo.exists():
         archivo.write_text(secrets.token_hex(32), encoding="utf-8")
