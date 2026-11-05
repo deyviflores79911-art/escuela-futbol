@@ -38,6 +38,45 @@ menú "Más" por secciones que sube desde abajo, tablas convertidas en tarjetas,
 adelante. El nombre `.ts.net` obliga a usar https: para eso, en otra terminal, `tailscale serve --bg 5000`
 y abrir `https://<nombre>.ts.net` (se quita con `tailscale serve reset`).
 
+## Publicar en internet (Vercel + Azure SQL)
+La app ya está preparada: el mismo código funciona en la computadora y en la nube.
+En la nube se activa sola cuando existe la variable `BD_SERVIDOR`.
+
+**1. Base de datos en Azure (una sola vez)**
+1. En https://portal.azure.com → **SQL databases** → **Create**. Usa la oferta gratis
+   ("Apply offer"). Crea un servidor nuevo con **SQL authentication** (usuario y contraseña;
+   anótalos) y región **Brazil South** (la más cercana a Bolivia).
+2. En el servidor → **Networking**: marca **Allow Azure services and resources to access this server**
+   (Vercel entra por ahí) y agrega tu IP para entrar desde SSMS.
+3. En SSMS (tu computadora): clic derecho en `Sistema_EscuelasDeportivas` → **Tasks** →
+   **Deploy Database to Microsoft Azure SQL Database** → conectar al servidor de Azure con ese usuario.
+   Copia todas las tablas y datos (pesa unos 8 MB).
+4. En SSMS, conectado a Azure, abre `preparar_azure.sql` y presiona **F5**: crea la tabla de lugares
+   y pone la hora de Bolivia en las fechas automáticas.
+
+**2. Vercel**
+1. https://vercel.com → **Add New → Project** → importa el repositorio `escuela-futbol`.
+2. **Root Directory**: `app_escuela`. Framework: **Flask** (lo detecta solo).
+3. **Environment Variables**:
+
+| Variable | Valor |
+|---|---|
+| `BD_SERVIDOR` | `<tu-servidor>.database.windows.net` |
+| `BD_NOMBRE` | `Sistema_EscuelasDeportivas` |
+| `BD_USUARIO` | el usuario de Azure |
+| `BD_CLAVE` | la contraseña de Azure |
+| `CLAVE_SECRETA` | un texto largo al azar (`python -c "import secrets; print(secrets.token_hex(32))"`) |
+
+4. **Deploy**. Cada vez que subas cambios a GitHub, Vercel publica la versión nueva sola.
+
+**Bueno saber**
+- La base gratis de Azure "se duerme" si nadie la usa: la primera vez puede tardar hasta un minuto.
+  Si sale "No se pudo conectar", espera y recarga.
+- La app usa siempre la hora de Bolivia, aunque Vercel esté en otro país.
+- En la nube los lugares ("Cómo llegar") se guardan en la tabla `LUGAR`, no en `lugares.json`.
+- El SSIS y `mineria_pagos.py` siguen leyendo la base de **esta computadora**. Para analizar los
+  pagos hechos en la nube, el SSIS tendría que apuntar a Azure.
+
 ## Poner o cambiar la contraseña de un usuario existente
 ```
 flask --app app definir-clave marco.admin@escuela.com

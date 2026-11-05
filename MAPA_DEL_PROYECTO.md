@@ -122,7 +122,7 @@ todo lo que se toca mide 44 px o más, y se puede agregar a la pantalla de inici
 
 | Qué | Dónde |
 |---|---|
-| **Conexión de la app** (base transaccional) | `app_escuela\config.py` → `CADENA_CONEXION` |
+| **Conexión de la app** (base transaccional) | `app_escuela\config.py` → `CADENA_CONEXION` (computadora) o variables `BD_*` (nube: Vercel + Azure SQL, ver `app_escuela\README.md`) |
 | **Conexión de la minería** (Data Warehouse) | `mineria_pagos.py`, constantes `SERVIDOR` y `DATA_WAREHOUSE` y función `cargar_datos()` |
 | **Conexión de los datos de prueba** | `datos_prueba\generar_pagos_prueba.py`, constantes `SERVIDOR` y `BASE` |
 | **Conexiones del SSIS** | `Package.dtsx`: 2 por base (OLE DB y ADO.NET), `.\MSSQLSERVER01` |

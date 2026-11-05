@@ -1,3 +1,6 @@
 Flask>=3.1
 Flask-WTF>=1.2
-pyodbc>=5.2
+# En la computadora (Windows): SQL Server local con ODBC Driver 17
+pyodbc>=5.2; sys_platform == "win32"
+# En la nube (Vercel + Azure SQL): no necesita instalar drivers
+pymssql>=2.3

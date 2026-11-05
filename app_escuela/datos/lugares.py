@@ -1,13 +1,13 @@
 """
 Lugares de entrenamiento con su enlace de Google Maps ("Cómo llegar").
-Se guardan en lugares.json (no en la base: así no se cambia la estructura de HORARIO).
-El nombre es el mismo texto que se guarda en HORARIO.lugar.
+En la computadora se guardan en lugares.json; en la nube (Vercel no deja guardar archivos),
+en la tabla LUGAR de Azure SQL. El nombre es el mismo texto que se guarda en HORARIO.lugar.
 """
 import json
 from urllib.parse import urlparse
 
 import config
-from datos.bd import ErrorDatos
+from datos.bd import ErrorDatos, consultar, transaccion
 
 # Solo enlaces de mapas conocidos (evita guardar enlaces raros)
 _HOSTS_MAPAS = {"maps.app.goo.gl", "goo.gl", "maps.google.com", "www.google.com", "google.com"}
@@ -15,6 +15,8 @@ _HOSTS_MAPAS = {"maps.app.goo.gl", "goo.gl", "maps.google.com", "www.google.com"
 
 def listar():
     """{nombre: enlace} en orden de nombre. Si el archivo no existe o está dañado, no hay lugares."""
+    if config.EN_LA_NUBE:
+        return {f["nombre"]: f["enlace"] for f in consultar("SELECT nombre, enlace FROM LUGAR ORDER BY nombre")}
     try:
         datos = json.loads(config.ARCHIVO_LUGARES.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -42,8 +44,15 @@ def guardar(nombre, url):
     nombre = (nombre or "").strip()
     if not nombre or len(nombre) > 100:
         raise ErrorDatos("El nombre del lugar es obligatorio (máximo 100 caracteres).")
+    url = validar_enlace(url)
+    if config.EN_LA_NUBE:
+        with transaccion() as cur:
+            cur.execute("UPDATE LUGAR SET enlace = ? WHERE nombre = ?", (url, nombre))
+            if cur.rowcount == 0:
+                cur.execute("INSERT INTO LUGAR (nombre, enlace) VALUES (?, ?)", (nombre, url))
+        return
     lugares = listar()
-    lugares[nombre] = validar_enlace(url)
+    lugares[nombre] = url
     _escribir(lugares)
 
 
@@ -51,6 +60,10 @@ def quitar(nombre):
     lugares = listar()
     if nombre not in lugares:
         raise ErrorDatos("Ese lugar no está guardado.")
+    if config.EN_LA_NUBE:
+        with transaccion() as cur:
+            cur.execute("DELETE FROM LUGAR WHERE nombre = ?", (nombre,))
+        return
     del lugares[nombre]
     _escribir(lugares)
 
