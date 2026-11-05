@@ -1,0 +1,264 @@
+// Botón sol/luna: cambia el modo y recuerda la elección
+document.getElementById("boton-tema").addEventListener("click", function () {
+  var raiz = document.documentElement;
+  var nuevo = raiz.getAttribute("data-theme") === "oscuro" ? "claro" : "oscuro";
+  raiz.setAttribute("data-theme", nuevo);
+  try { localStorage.setItem("tema", nuevo); } catch (e) {}
+  document.dispatchEvent(new CustomEvent("cambio-tema"));  // los gráficos cambian sus colores
+});
+
+// Botón de imprimir (recibos)
+document.querySelectorAll("[data-imprimir]").forEach(function (b) {
+  b.addEventListener("click", function () { window.print(); });
+});
+
+// Confirmación antes de acciones delicadas: <form data-confirmar="¿Seguro?">
+document.addEventListener("submit", function (e) {
+  var mensaje = e.target.getAttribute("data-confirmar");
+  if (mensaje && !window.confirm(mensaje)) e.preventDefault();
+});
+
+// <select data-alternar="id">: el bloque se muestra solo cuando el select está vacío,
+// o, si tiene data-mostrar-con="valor", solo cuando el select tiene ese valor
+document.querySelectorAll("select[data-alternar]").forEach(function (sel) {
+  var bloque = document.getElementById(sel.getAttribute("data-alternar"));
+  var valor = sel.getAttribute("data-mostrar-con") || "";
+  function aplicar() { bloque.disabled = sel.value !== valor; }
+  sel.addEventListener("change", aplicar);
+  aplicar();
+});
+
+// Casilla "Todos": marca o desmarca todas las casillas con ese nombre (pantalla Horarios)
+document.querySelectorAll("[data-marcar-todos]").forEach(function (todos) {
+  var casillas = document.querySelectorAll("input[type=checkbox][name='" + todos.getAttribute("data-marcar-todos") + "']");
+  function revisar() { todos.checked = Array.prototype.every.call(casillas, function (c) { return c.checked; }); }
+  todos.addEventListener("change", function () { casillas.forEach(function (c) { c.checked = todos.checked; }); });
+  casillas.forEach(function (c) { c.addEventListener("change", revisar); });
+  revisar();
+});
+
+// Pantalla Horarios: con "Quitar entrenamiento" no se piden hora ni lugar
+document.querySelectorAll(".form-horarios").forEach(function (f) {
+  var bloque = f.querySelector(".solo-poner");
+  function aplicar() {
+    var quitar = f.querySelector("input[name=accion]:checked").value === "quitar";
+    bloque.hidden = quitar;
+    bloque.querySelectorAll("input, select").forEach(function (c) { c.disabled = quitar; });
+    if (!quitar) {
+      var sel = bloque.querySelector("select[data-alternar]");
+      if (sel) sel.dispatchEvent(new Event("change"));
+    }
+  }
+  f.querySelectorAll("input[name=accion]").forEach(function (r) { r.addEventListener("change", aplicar); });
+  aplicar();
+});
+
+// Alumno nuevo: al poner la fecha de nacimiento, solo quedan los grupos de su edad (el servidor igual lo valida)
+(function () {
+  var fecha = document.getElementById("fecha_nacimiento");
+  var grupo = document.querySelector("#elegir-grupo select");
+  if (!fecha || !grupo) return;
+  var ayuda = document.getElementById("ayuda-grupo");
+  function edad(valor) {
+    var n = new Date(valor + "T00:00:00"), hoy = new Date();
+    if (isNaN(n)) return null;
+    var e = hoy.getFullYear() - n.getFullYear();
+    if (hoy.getMonth() < n.getMonth() || (hoy.getMonth() === n.getMonth() && hoy.getDate() < n.getDate())) e--;
+    return e;
+  }
+  function filtrar() {
+    var e = edad(fecha.value), validos = [], llenos = [];
+    Array.prototype.forEach.call(grupo.options, function (o) {
+      if (!o.dataset.min) return;
+      var cabe = e === null || (e >= +o.dataset.min && e <= +o.dataset.max);
+      var lleno = o.dataset.lleno === "1";
+      o.hidden = !cabe;
+      o.disabled = !cabe || lleno;
+      if (cabe && lleno) llenos.push(o.dataset.nombre);
+      if (cabe && !lleno) validos.push(o);
+    });
+    if (grupo.selectedOptions[0] && grupo.selectedOptions[0].hidden) grupo.value = "";
+    if (validos.length === 1 && !grupo.value) grupo.value = validos[0].value;
+    if (e === null) return;
+    if (validos.length) ayuda.textContent = "Tiene " + e + " años: " + validos.length + " grupo(s) de su edad con cupo.";
+    else if (llenos.length) ayuda.textContent = "Tiene " + e + " años, pero " + llenos.join(" y ") +
+      " está lleno. Elige «Inscribir después» o sube el cupo del grupo.";
+    else ayuda.textContent = "Tiene " + e + " años y no hay ningún grupo activo de su edad.";
+  }
+  fecha.addEventListener("change", filtrar);
+  fecha.addEventListener("input", filtrar);
+  filtrar();
+})();
+
+// <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
+// (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
+document.addEventListener("submit", function (e) {
+  if (!e.defaultPrevented && e.target.hasAttribute("data-un-solo-envio")) {
+    e.target.querySelectorAll("button[type=submit]").forEach(function (b) { b.disabled = true; });
+  }
+});
+
+// Celular: cada fila de tabla se muestra como tarjeta. A cada celda se le pone el título de su columna
+// (data-label) para que el CSS lo escriba al lado del dato. No aplica al mapa de calor ni a tablas resumen.
+function tablasComoTarjetas(raiz) {
+  (raiz || document).querySelectorAll("table.tabla:not(.calor):not(.tabla-simple)").forEach(function (tabla) {
+    var titulos = [];
+    tabla.querySelectorAll("thead th").forEach(function (th) {
+      for (var i = 0; i < (th.colSpan || 1); i++) titulos.push(th.textContent.trim());
+    });
+    tabla.querySelectorAll("tbody tr").forEach(function (fila) {
+      var columna = 0;
+      Array.prototype.forEach.call(fila.cells, function (celda) {
+        var titulo = celda.colSpan > 1 ? "" : (titulos[columna] || "");
+        if (titulo === "Acciones") titulo = "";  // los botones van solos, a lo ancho
+        celda.setAttribute("data-label", titulo);
+        columna += celda.colSpan || 1;
+        // Junta todo el contenido de la celda en un solo bloque para que el dato no se reparta
+        if (titulo && !celda.querySelector(":scope > .valor")) {
+          var valor = document.createElement("div");
+          valor.className = "valor";
+          while (celda.firstChild) valor.appendChild(celda.firstChild);
+          celda.appendChild(valor);
+        }
+        if (!titulo && celda.cellIndex > 0 && celda.querySelector(".boton") && !celda.querySelector(":scope > .valor")) {
+          var acciones = document.createElement("div");
+          acciones.className = "valor";
+          while (celda.firstChild) acciones.appendChild(celda.firstChild);
+          celda.appendChild(acciones);
+        }
+      });
+    });
+    tabla.classList.add("tabla-tarjetas");
+    if (tabla.parentElement.classList.contains("tabla-envoltura")) tabla.parentElement.classList.add("envoltura-tarjetas");
+  });
+}
+tablasComoTarjetas();
+document.addEventListener("contenido-actualizado", function () { tablasComoTarjetas(); });
+
+// Menú "Más" del celular: se abre con el teclado (Enter/Espacio) y se cierra con Escape
+(function () {
+  var casilla = document.getElementById("menu-abrir");
+  if (!casilla) return;
+  document.querySelectorAll("label[for=menu-abrir][role=button]").forEach(function (b) {
+    b.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); casilla.checked = !casilla.checked; }
+    });
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") casilla.checked = false; });
+})();
+
+// TIEMPO REAL en todas las pantallas: cada 5 s (y al volver a la app) se pregunta si cambió algo
+// en la base. Si cambió, la pantalla se actualiza sola:
+//  - las zonas "en vivo" (data-vivo) se refrescan sin recargar;
+//  - el resto de la página se vuelve a cargar, en el mismo lugar del scroll;
+//  - si la persona está escribiendo en un formulario, NO se borra nada: aparece un aviso con un botón.
+(function () {
+  var cuerpo = document.body, url = cuerpo.getAttribute("data-url-cambios");
+  if (!url) return;
+  var huella = cuerpo.getAttribute("data-huella"), revisando = false, SEGUNDOS = 5;
+
+  // Volver al mismo lugar después de recargar
+  try {
+    var guardado = sessionStorage.getItem("scroll:" + location.pathname + location.search);
+    if (guardado) { sessionStorage.removeItem("scroll:" + location.pathname + location.search); window.scrollTo(0, +guardado); }
+  } catch (e) {}
+
+  var editando = false;
+  document.addEventListener("input", function (e) {
+    if (e.target.closest("main form")) editando = true;
+  });
+  document.addEventListener("submit", function () { editando = false; });
+
+  function avisar() {
+    var aviso = document.getElementById("aviso-cambios");
+    if (aviso) { aviso.hidden = false; return; }
+    aviso = document.createElement("p");
+    aviso.id = "aviso-cambios";
+    aviso.className = "mensaje mensaje-aviso aviso-cambios";
+    aviso.setAttribute("role", "status");
+    aviso.innerHTML = "<span>Hay datos nuevos. Termina lo que estás escribiendo y actualiza.</span>";
+    var boton = document.createElement("button");
+    boton.type = "button"; boton.className = "boton boton-chico"; boton.textContent = "Actualizar";
+    boton.addEventListener("click", recargar);
+    aviso.appendChild(boton);
+    var main = document.querySelector("main");
+    main.insertBefore(aviso, main.firstChild);
+  }
+
+  function recargar() {
+    try { sessionStorage.setItem("scroll:" + location.pathname + location.search, String(window.scrollY)); } catch (e) {}
+    location.reload();
+  }
+
+  function aplicarCambio() {
+    var zonas = document.querySelectorAll("[data-vivo]");
+    if (zonas.length) {
+      document.dispatchEvent(new CustomEvent("datos-cambiaron"));   // las zonas en vivo se refrescan solas
+    } else if (editando) {
+      avisar();
+    } else {
+      recargar();
+    }
+  }
+
+  function revisar() {
+    if (revisando || document.hidden) return;
+    revisando = true;
+    fetch(url, { credentials: "same-origin", headers: { "X-Consulta-Automatica": "1" } })
+      .then(function (r) { if (!r.ok || r.redirected) throw new Error("sin sesión"); return r.json(); })
+      .then(function (d) {
+        if (!huella) { huella = d.huella; return; }
+        if (d.huella && d.huella !== huella) { huella = d.huella; aplicarCambio(); }
+      })
+      .catch(function () {})
+      .then(function () { revisando = false; });
+  }
+
+  setInterval(revisar, SEGUNDOS * 1000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) revisar(); });
+  window.addEventListener("focus", revisar);
+})();
+
+// Pantallas en vivo: <div data-vivo="45"> se vuelve a pedir al servidor cada 45 s y se reemplaza
+// sin recargar toda la página. El refresco automático no cuenta como actividad (la sesión igual expira).
+(function () {
+  var zona = document.querySelector("[data-vivo]");
+  if (!zona) return;
+  var segundos = parseInt(zona.getAttribute("data-vivo"), 10) || 45;
+  var ultima = Date.now();
+
+  function mostrarHace() {
+    var el = zona.querySelector("[data-hace]");
+    if (!el) return;
+    var s = Math.round((Date.now() - ultima) / 1000);
+    el.textContent = s < 60 ? "hace " + s + " s" : "hace " + Math.floor(s / 60) + " min";
+  }
+
+  function actualizar(automatico) {
+    fetch(location.href, { credentials: "same-origin", headers: automatico ? { "X-Consulta-Automatica": "1" } : {} })
+      .then(function (r) { if (!r.ok) throw new Error(r.status === 503 ? "base" : r.status); return r.text(); })
+      .then(function (html) {
+        var nueva = new DOMParser().parseFromString(html, "text/html").querySelector("[data-vivo]");
+        if (!nueva) throw new Error("La sesión se cerró");
+        zona.innerHTML = nueva.innerHTML;
+        ultima = Date.now();
+        mostrarHace();
+        document.dispatchEvent(new CustomEvent("contenido-actualizado"));
+      })
+      .catch(function (error) {
+        var aviso = zona.querySelector("[data-sin-conexion]");
+        if (!aviso) return;
+        if (error.message === "base") {
+          aviso.textContent = "La base de datos no responde (SQL Server apagado). Se reintentará sola cada " + segundos + " s.";
+        }
+        aviso.hidden = false;
+      });
+  }
+
+  zona.addEventListener("click", function (e) {
+    if (e.target.closest("[data-actualizar]")) actualizar(false);
+  });
+  document.addEventListener("datos-cambiaron", function () { actualizar(true); });
+  setInterval(function () { actualizar(true); }, segundos * 1000);
+  setInterval(mostrarHace, 5000);
+})();

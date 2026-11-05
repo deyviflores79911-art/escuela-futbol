@@ -1,0 +1,5 @@
+{# Estado de un pago con texto e icono (variable p) #}
+{% from "_iconos.html" import icono %}
+{% if p.estado == 'Confirmado' %}<span class="estado estado-ok">{{ icono('check') }} Confirmado</span>
+{% elif p.estado == 'Parcial' %}<span class="estado estado-medio">{{ icono('info') }} Parcial</span>
+{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Anulado</span>{% endif %}

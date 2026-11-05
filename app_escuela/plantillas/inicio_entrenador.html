@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<h1 class="saludo">Hola, {{ usuario.nombres }}</h1>
+{% set dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'] %}
+{% set hoy_dia = dias[hoy.weekday()] %}
+{% for g in grupos %}
+  {% set de_hoy = g.horarios|selectattr('dia_semana', 'equalto', hoy_dia)|list %}
+  <section class="tarjeta tarjeta-hoy">
+    <span class="ayuda">Hoy · {{ g.nombre }}</span>
+    {% if de_hoy %}{% for h in de_hoy %}
+      <strong>{{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}</strong>
+      <span>{{ h.lugar or '' }}</span>
+      {% if mapa(h.lugar) %}<a class="boton boton-claro" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">{{ icono('mapa') }} Cómo llegar</a>{% endif %}
+    {% endfor %}{% else %}
+      <strong>Hoy no hay entrenamiento</strong>
+    {% endif %}
+  </section>
+{% endfor %}
+
+<nav class="acciones-grandes" aria-label="Acciones principales">
+  <a class="accion-grande accion-principal" href="{{ url_for('reportes.mi_grupo') }}">
+    {{ icono('personas') }}<span class="accion-nombre">Mi grupo</span>
+    <span class="accion-detalle">{% if grupos %}{% for g in grupos %}{{ g.alumnos|length }} alumnos · {{ g.deben }} deben{% if not loop.last %}; {% endif %}{% endfor %}{% else %}Sin grupo asignado{% endif %}</span>
+  </a>
+</nav>
+{% endblock %}

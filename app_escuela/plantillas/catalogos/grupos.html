@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_campos.html" import pestanas %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Grupos{% endblock %}
+{% block contenido %}
+{{ pestanas([('catalogos.grupos', 'Grupos'), ('catalogos.categorias', 'Categorías'), ('catalogos.horarios', 'Horarios')]) }}
+<div class="barra-titulo">
+  <div>
+    <h1>Grupos</h1>
+    {% set activos = grupos|selectattr('estado', 'equalto', 'ACTIVO')|list %}
+    <p class="subtitulo">{{ activos|length }} grupo{{ 's' if activos|length != 1 }} activo{{ 's' if activos|length != 1 }} ·
+      {{ activos|sum(attribute='inscritos') }} alumnos inscritos · {{ activos|sum(attribute='libres') }} cupos libres</p>
+  </div>
+  <a class="boton" href="{{ url_for('catalogos.grupo_form') }}">{{ icono('mas') }} Nuevo grupo</a>
+</div>
+
+{% if grupos %}
+<div class="rejilla-grupos">
+  {% for g in grupos %}
+  <a class="tarjeta enlace-tarjeta tarjeta-grupo{{ ' inactivo' if g.estado != 'ACTIVO' }}" href="{{ url_for('catalogos.grupo', id_grupo=g.id_grupo) }}">
+    <div class="cabeza-grupo">
+      <h2>{{ g.nombre }}</h2>
+      {% if g.estado != 'ACTIVO' %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>
+      {% elif g.lleno %}<span class="estado estado-mal">{{ icono('alerta') }} Lleno</span>
+      {% else %}<span class="estado estado-ok">{{ icono('check') }} {{ g.libres }} libre{{ 's' if g.libres != 1 }}</span>{% endif %}
+    </div>
+    <p>{{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años) · {{ g.entrenador }}</p>
+    {% set porcentaje = ((g.inscritos / g.cupo_maximo * 100) if g.cupo_maximo else 0)|round|int %}
+    <div class="cupo" role="img" aria-label="{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados">
+      <span style="width: {{ [porcentaje, 100]|min }}%"></span>
+    </div>
+    <p class="ayuda">{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados · {{ g.precio_mensual|bs }} al mes</p>
+    <p class="ayuda">{% for h in g.horarios %}{{ h.dia }} {{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}{{ ' · ' if not loop.last }}{% else %}Sin horarios activos{% endfor %}</p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="tarjeta vacio">
+  <p>Todavía no hay grupos. Crea el primero para poder inscribir alumnos.</p>
+  <a class="boton" href="{{ url_for('catalogos.grupo_form') }}">{{ icono('mas') }} Crear el primer grupo</a>
+</div>
+{% endif %}
+{% endblock %}

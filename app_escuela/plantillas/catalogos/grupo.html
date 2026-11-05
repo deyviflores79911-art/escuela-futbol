@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_campos.html" import csrf %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}{{ g.nombre }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('catalogos.grupos') }}">← Grupos</a></p>
+<div class="barra-titulo">
+  <div>
+    <h1>{{ g.nombre }}</h1>
+    <p class="subtitulo">{{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años) · Entrenador: {{ g.entrenador }} ·
+      {{ g.precio_mensual|bs }} al mes</p>
+  </div>
+  <div class="botones">
+    <a class="boton boton-claro" href="{{ url_for('catalogos.grupo_form', id_grupo=g.id_grupo) }}">Editar</a>
+    <form method="post" action="{{ url_for('catalogos.grupo_estado', id_grupo=g.id_grupo) }}" class="en-linea"
+          data-confirmar="{{ '¿Desactivar el grupo ' ~ g.nombre ~ '? No se podrán inscribir alumnos nuevos.' if g.estado == 'ACTIVO' else '¿Activar de nuevo el grupo ' ~ g.nombre ~ '?' }}">
+      {{ csrf() }}
+      <button class="boton {{ 'boton-peligro' if g.estado == 'ACTIVO' else 'boton-claro' }}">{{ 'Desactivar' if g.estado == 'ACTIVO' else 'Activar' }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="indicadores">
+  <div class="tarjeta indicador"><span class="valor">{{ g.inscritos }} / {{ g.cupo_maximo }}</span><span>cupos ocupados</span></div>
+  <div class="tarjeta indicador"><span class="valor">{{ g.libres }}</span><span>cupo{{ 's' if g.libres != 1 }} libre{{ 's' if g.libres != 1 }}{{ ' (grupo lleno)' if g.lleno }}</span></div>
+  <div class="tarjeta indicador"><span class="valor">{{ g.horarios|selectattr('estado', 'equalto', 'ACTIVO')|list|length }}</span><span>horarios por semana</span></div>
+</div>
+
+<section class="tarjeta">
+  <div class="barra-titulo">
+    <h2>Horarios</h2>
+    <a class="boton boton-chico" href="{{ url_for('catalogos.horario_form', id_grupo=g.id_grupo) }}">{{ icono('mas') }} Agregar horario</a>
+  </div>
+  {% if g.horarios %}
+  <div class="tabla-envoltura"><table class="tabla">
+    <thead><tr><th>Día</th><th>Hora</th><th>Lugar</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+    {% for h in g.horarios %}
+      <tr>
+        <td>{{ h.dia }}</td>
+        <td>{{ h.hora_inicio.strftime('%H:%M') }} – {{ h.hora_fin.strftime('%H:%M') }}</td>
+        <td>{{ h.lugar or '—' }}{% if mapa(h.lugar) %} <a class="como-llegar" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">Cómo llegar</a>{% endif %}</td>
+        <td>{% if h.estado == 'ACTIVO' %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}</td>
+        <td class="acciones">
+          <a class="boton boton-claro boton-chico" href="{{ url_for('catalogos.horario_form', id_grupo=g.id_grupo, id_horario=h.id_horario) }}">Editar</a>
+          <form method="post" action="{{ url_for('catalogos.horario_estado', id_horario=h.id_horario) }}" class="en-linea">
+            {{ csrf() }}<button class="boton boton-claro boton-chico">{{ 'Desactivar' if h.estado == 'ACTIVO' else 'Activar' }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    <p class="vacio">Este grupo todavía no tiene horarios. Agrega el primero.</p>
+  {% endif %}
+</section>
+
+<section class="tarjeta">
+  {% set activos = inscritos|selectattr('estado', 'equalto', 'ACTIVA')|list %}
+  <h2>Alumnos inscritos ({{ activos|length }})</h2>
+  <p class="ayuda">Para inscribir a alguien, abre su ficha en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
+  {% if inscritos %}
+  <div class="tabla-envoltura"><table class="tabla">
+    <thead><tr><th>Alumno</th><th>Edad</th><th>Tutor</th><th>Inscrito el</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+    {% for i in inscritos %}
+      <tr>
+        <td><a href="{{ url_for('alumnos.ficha', id_alumno=i.id_alumno) }}"><strong>{{ i.nombres }} {{ i.apellidos or '' }}</strong></a><br><span class="ayuda">{{ i.codigo }}</span></td>
+        <td>{{ i.edad if i.edad is not none else '—' }}{% if i.edad is not none and (i.edad < g.edad_minima or i.edad > g.edad_maxima) %} <br><span class="estado estado-mal">{{ icono('alerta') }} Fuera de su categoría</span>{% endif %}</td>
+        <td>{{ i.tutor or '—' }}<br><span class="ayuda">{{ i.telefono or '' }}</span></td>
+        <td>{{ i.fecha_inscripcion|fecha }}</td>
+        <td>{% if i.estado == 'ACTIVA' %}<span class="estado estado-ok">{{ icono('check') }} Activa</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Baja</span>{% endif %}</td>
+        <td>
+          {% if i.estado == 'ACTIVA' %}
+          <form method="post" action="{{ url_for('alumnos.baja', id_inscripcion=i.id_inscripcion, volver=request.path) }}" class="en-linea"
+                data-confirmar="¿Dar de baja a {{ i.nombres }} de {{ g.nombre }}? Su historial y sus pagos se conservan.">
+            {{ csrf() }}<button class="boton boton-peligro boton-chico">Dar de baja</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    <p class="vacio">Todavía no hay alumnos inscritos en este grupo.</p>
+  {% endif %}
+</section>
+{% endblock %}

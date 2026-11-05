@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_campos.html" import csrf %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<div class="barra-titulo">
+  <div>
+    <h1>Usuarios entrenadores</h1>
+    {% set activos = entrenadores|selectattr('estado', 'equalto', 'ACTIVO')|list|length %}
+    <p class="subtitulo">{{ activos }} activo{{ 's' if activos != 1 }} de {{ entrenadores|length }}</p>
+  </div>
+  <a class="boton" href="{{ url_for('usuarios.nuevo') }}">{{ icono('mas') }} Nuevo entrenador</a>
+</div>
+
+{% if entrenadores %}
+<div class="tabla-envoltura">
+<table class="tabla">
+  <thead>
+    <tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Especialidad</th><th>Estado</th><th>Acciones</th></tr>
+  </thead>
+  <tbody>
+  {% for e in entrenadores %}
+    {% set activo = e.estado == 'ACTIVO' %}
+    <tr>
+      <td>{{ e.nombres }} {{ e.apellidos or '' }}</td>
+      <td>{{ e.correo }}</td>
+      <td>{{ e.telefono or '—' }}</td>
+      <td>{{ e.especialidad or ('Sin ficha de entrenador' if not e.id_entrenador else '—') }}</td>
+      <td>
+        {% if activo %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>
+        {% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}
+      </td>
+      <td class="acciones">
+        <a class="boton boton-claro boton-chico" href="{{ url_for('usuarios.editar', id_usuario=e.id_usuario) }}">Editar</a>
+        <form method="post" action="{{ url_for('usuarios.cambiar_estado', id_usuario=e.id_usuario) }}" class="en-linea"
+              data-confirmar="{{ ('¿Desactivar a ' ~ e.nombres ~ '? Ya no podrá entrar al sistema.') if activo else ('¿Activar de nuevo a ' ~ e.nombres ~ '?') }}">
+          {{ csrf() }}
+          <button type="submit" class="boton boton-chico {{ 'boton-peligro' if activo else 'boton-claro' }}">
+            {{ 'Desactivar' if activo else 'Activar' }}
+          </button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="tarjeta vacio">
+  <p>Todavía no hay usuarios entrenadores. Crea el primero para que pueda ver su grupo.</p>
+  <a class="boton" href="{{ url_for('usuarios.nuevo') }}">{{ icono('mas') }} Crear el primer entrenador</a>
+</div>
+{% endif %}
+{% endblock %}

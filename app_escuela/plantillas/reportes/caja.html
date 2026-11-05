@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_campos.html" import pestanas %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Resumen de caja{% endblock %}
+{% block contenido %}
+{{ pestanas([('reportes.deudores', 'Deudores'), ('reportes.caja', 'Resumen de caja')]) }}
+<h1>Resumen de caja</h1>
+<p class="subtitulo">Lo cobrado en un día o en un periodo, con el subtotal por método de pago. Los pagos anulados no se suman.</p>
+
+<form class="tarjeta filtros filtros-caja" method="get">
+  <div class="campo"><label for="desde">Desde</label><input id="desde" name="desde" type="date" value="{{ r.desde.isoformat() }}" required></div>
+  <div class="campo"><label for="hasta">Hasta</label><input id="hasta" name="hasta" type="date" value="{{ r.hasta.isoformat() }}" required></div>
+  <div class="botones"><button class="boton">Ver</button></div>
+  <p class="atajos">
+    {% for nombre, d, h in atajos %}
+      <a class="chip-enlace {% if d == r.desde and h == r.hasta %}chip-activo{% endif %}" href="{{ url_for('reportes.caja', desde=d.isoformat(), hasta=h.isoformat()) }}">{{ nombre }}</a>
+    {% endfor %}
+  </p>
+</form>
+
+<div data-vivo="{{ refresco }}" id="caja-vivo" data-url-datos="{{ url_for('reportes.caja_api', desde=r.desde.isoformat(), hasta=r.hasta.isoformat()) }}">
+  {% include '_actualizado.html' %}
+  <div class="resumen-alertas">
+    <section class="tarjeta">
+      <p class="tipo-grafico">Gráfico de barras horizontales</p>
+      <h2>Cobrado por método</h2>
+      <div class="grafico grafico-chico"><canvas id="grafico-caja" role="img" aria-label="Total cobrado por método de pago"></canvas></div>
+    </section>
+    <section class="tarjeta">
+      <h2>{{ 'Del ' ~ r.desde|fecha ~ ' al ' ~ r.hasta|fecha if r.desde != r.hasta else 'Del ' ~ r.desde|fecha }}</h2>
+      <div class="total-caja"><span>Total cobrado</span><strong>{{ r.total|bs }}</strong></div>
+      <table class="tabla tabla-simple">
+        <thead><tr><th>Método</th><th>Pagos</th><th>Subtotal</th></tr></thead>
+        <tbody>
+        {% for m in r.por_metodo %}<tr><td>{{ m.metodo }}</td><td>{{ m.cantidad }}</td><td>{{ m.total|bs }}</td></tr>{% endfor %}
+        </tbody>
+        <tfoot><tr><th>Total</th><th>{{ r.cantidad }}</th><th>{{ r.total|bs }}</th></tr></tfoot>
+      </table>
+      {% if r.anulados %}<p class="ayuda">{{ icono('info') }} {{ r.anulados }} pago{{ 's' if r.anulados != 1 }} anulado{{ 's' if r.anulados != 1 }} ({{ r.total_anulado|bs }}) no se suma{{ 'n' if r.anulados != 1 }}.</p>{% endif %}
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <h2>Pagos del periodo ({{ r.pagos|length }})</h2>
+    {% if r.pagos %}
+    <div class="tabla-envoltura"><table class="tabla">
+      <thead><tr><th>Recibo</th><th>Fecha</th><th>Alumno</th><th>Periodo</th><th>Método</th><th>Monto</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for p in r.pagos %}
+        <tr{% if p.estado == 'Anulado' %} class="fila-anulada"{% endif %}>
+          <td><a href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }}</strong></a></td>
+          <td>{{ p.fecha_pago|fecha }}</td>
+          <td>{{ p.nombres }} {{ p.apellidos or '' }}</td>
+          <td>{{ p.periodo }}</td>
+          <td>{{ p.metodo }}</td>
+          <td>{{ p.monto|bs }}</td>
+          <td>{% include '_estado_pago.html' %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+      <p class="vacio">No hay pagos en esas fechas. Prueba con "Este mes" o "Mes anterior".</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/graficos.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/reportes.js') }}"></script>
+{% endblock %}

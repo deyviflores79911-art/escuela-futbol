@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Inscribir{% endblock %}
+{% block contenido %}
+<h1>Inscribir</h1>
+<a class="accion-grande accion-principal accion-ancha" href="{{ url_for('alumnos.alumno_form') }}">
+  {{ icono('persona-mas') }}<span class="accion-nombre">Alumno nuevo</span>
+  <span class="accion-detalle">Datos del niño, del tutor y su grupo en un solo paso</span>
+</a>
+
+<section class="tarjeta">
+  <h2>¿Ya está registrado?</h2>
+  <p class="ayuda">Búscalo para inscribirlo en otro grupo.</p>
+  <form method="get" role="search" class="form-buscar">
+    <label for="q" class="solo-lector">Buscar alumno</label>
+    <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" placeholder="Nombre, código o tutor" enterkeyhint="search">
+    <button class="boton">Buscar</button>
+  </form>
+  {% if q %}
+    {% if encontrados %}
+    <ul class="lista-resultados">
+      {% for a in encontrados %}
+      <li>
+        <span><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong><br><span class="ayuda">{{ a.codigo }} · {{ a.grupos or 'Sin grupo' }}</span></span>
+        <a class="boton" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}#inscribir">Inscribir</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vacio">No se encontró «{{ q }}». Regístralo como alumno nuevo.</p>{% endif %}
+  {% endif %}
+</section>
+{% endblock %}

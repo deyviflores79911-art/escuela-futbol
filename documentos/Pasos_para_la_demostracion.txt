@@ -1,0 +1,389 @@
+=====================================================================
+  PASOS PARA LA DEMOSTRACION FRENTE A LA INGENIERA
+  Data Mining - Escuela de futbol
+  Sistema_EscuelasDeportivas -> SSIS -> DW_EscuelasDeportivas -> Python
+  (numeros actualizados al 14/10/2026 09:26)
+=====================================================================
+
+Programas que se usan:
+  - SQL Server Management Studio (SSMS)       -> para las consultas
+  - Visual Studio                             -> para el paquete SSIS
+  - Una terminal (la de VS Code, o "cmd")     -> para Python
+  - El navegador (Chrome o Edge)              -> para ver el dashboard y la app web
+
+Rutas importantes:
+  - Proyecto Python:  C:\Users\msi\Desktop\deportivva
+  - Paquete SSIS:     C:\Users\msi\source\repos\ETL_EscuelasDeportivas\ETL_EscuelasDeportivas.slnx
+  - Dashboard:        C:\Users\msi\Desktop\deportivva\resultados\dashboard.html
+  - App web:          http://localhost:5000  (se arranca en el PASO 10)
+  - Carpeta prueba:   C:\Users\msi\Desktop\prueba_dashboard
+  - Servidor SQL:     localhost\MSSQLSERVER01   (en SSMS se escribe .\MSSQLSERVER01)
+  - Mapa del proyecto (donde esta cada cosa): C:\Users\msi\Desktop\deportivva\MAPA_DEL_PROYECTO.md
+
+
+#####################################################################
+  ANTES DE LA CLASE (hacerlo en casa, una sola vez)
+#####################################################################
+
+PASO 0.1 - Revisar que SQL Server este encendido
+  1. Presiona la tecla Windows, escribe "Servicios" y abrelo.
+  2. Busca "SQL Server (MSSQLSERVER01)".
+  3. Debe decir "En ejecucion". Si no, clic derecho -> Iniciar.
+
+PASO 0.2 - Revisar que Python y las librerias funcionen
+  Abre una terminal y escribe:
+
+      python -c "import pandas, sklearn, seaborn, pyodbc, docx, flask, flask_wtf; print('TODO OK')"
+
+  Debe responder:  TODO OK
+  Si dice que "python" no se reconoce, usa C:\Python314\python.exe en
+  lugar de "python" en todos los comandos de esta guia.
+
+PASO 0.3 - Ensayar los pasos 1 al 10 una vez completos
+  Asi sabes cuanto tarda cada uno y no hay sorpresas en clase.
+
+PASO 0.4 - Cerrar el Word del informe
+  Si Presentacion_Data_Mining.docx esta abierto, el dashboard igual se
+  actualiza, pero el Word no. Cierralo antes de ejecutar el SSIS.
+
+
+#####################################################################
+  EN LA CLASE
+#####################################################################
+
+---------------------------------------------------------------------
+PASO 1 - Mostrar los datos en la base transaccional
+---------------------------------------------------------------------
+QUE DECIR: "Estos son los pagos de la base transaccional. Los REC- son
+los datos de ejemplo entregados; los SIM- y PRB- son pagos simulados que
+agregue para probar el modelo."
+
+  1. Abre SSMS y conectate a:  .\MSSQLSERVER01
+  2. Clic en "Nueva consulta", pega esto y presiona F5:
+
+      USE Sistema_EscuelasDeportivas;
+      SELECT COUNT(*) AS total_pagos,
+             SUM(CASE WHEN numero_recibo LIKE 'REC-%' THEN 1 ELSE 0 END) AS entregados,
+             SUM(CASE WHEN numero_recibo LIKE 'SIM-%' OR numero_recibo LIKE 'PRB-%'
+                      THEN 1 ELSE 0 END) AS simulados
+      FROM PAGO;
+
+  RESULTADO ESPERADO:  total_pagos = 862 | entregados = 300 | simulados = 562
+  (562 = 502 SIM- de generar_pagos_prueba.py + 60 PRB- de pagos_prueba_60.sql)
+
+
+---------------------------------------------------------------------
+PASO 2 - Ejecutar el paquete SSIS (carga el Data Warehouse y
+         actualiza el dashboard)
+---------------------------------------------------------------------
+QUE DECIR: "El ETL carga el Data Warehouse y, al final, la tarea
+ACTUALIZAR_DASHBOARD ejecuta mi script de Python, que vuelve a calcular
+todo con los datos nuevos."
+
+  1. Abre Visual Studio.
+  2. Archivo -> Abrir -> Proyecto o solucion ->
+     C:\Users\msi\source\repos\ETL_EscuelasDeportivas\ETL_EscuelasDeportivas.slnx
+     (Si Visual Studio avisa que un archivo cambio fuera del programa,
+     elige "Si" para recargarlo.)
+  3. En el Explorador de soluciones, doble clic en Package.dtsx.
+  4. Verifica que el flujo termine asi:
+        ... -> TIEMPO -> H_PAGOS -> ACTUALIZAR_DASHBOARD
+  5. Presiona F5 (o el boton verde "Iniciar").
+  6. Espera. ACTUALIZAR_DASHBOARD tarda unos 20 a 40 segundos porque ahi
+     Python entrena los modelos y dibuja los graficos.
+  7. Todas las tareas deben quedar con check verde.
+  8. Presiona Shift+F5 (Detener depuracion) para volver al diseno.
+
+  Ademas del dashboard y el Word, ACTUALIZAR_DASHBOARD deja en resultados\
+  los archivos que lee la app web: metricas.json, riesgo_alumnos.json,
+  datos_graficos.json y patrones.json.
+
+  Si ACTUALIZAR_DASHBOARD queda en rojo: mira "Problemas comunes" al
+  final de esta guia y usa el PLAN B.
+
+
+---------------------------------------------------------------------
+PASO 3 - Comprobar que el Data Warehouse se cargo bien
+---------------------------------------------------------------------
+QUE DECIR: "El Data Warehouse tiene los mismos 862 pagos que la base."
+
+  En SSMS, nueva consulta, pega y presiona F5:
+
+      USE DW_EscuelasDeportivas;
+      SELECT COUNT(*) AS total_pagos,
+             SUM(CASE WHEN numero_recibo LIKE 'SIM-%' OR numero_recibo LIKE 'PRB-%'
+                      THEN 1 ELSE 0 END) AS simulados,
+             SUM(CAST(pago_atrasado AS int)) AS atrasados,
+             (SELECT COUNT(*) FROM D_ALUMNO) AS alumnos,
+             (SELECT COUNT(*) FROM D_TIEMPO) AS fechas
+      FROM H_PAGOS;
+
+  RESULTADO ESPERADO:
+      total_pagos = 862 | simulados = 562 | atrasados = 299
+      alumnos = 107     | fechas = 194
+
+
+---------------------------------------------------------------------
+PASO 4 - Abrir el dashboard y mostrar de donde salen los datos
+---------------------------------------------------------------------
+QUE DECIR: "El dashboard lo genero Python leyendo el Data Warehouse.
+Aqui dice la fuente y la hora."
+
+  1. Abre la carpeta C:\Users\msi\Desktop\deportivva\resultados
+  2. Doble clic en dashboard.html (se abre en el navegador).
+  3. Muestra el recuadro naranja de arriba. Debe decir:
+        "Fuente leida: Data Warehouse DW_EscuelasDeportivas (localhost\MSSQLSERVER01)"
+     y que 300 pagos son de ejemplo (REC-) y 562 son simulados (SIM- y PRB-).
+  4. Baja hasta el final: dice la fecha y hora en que se genero. Debe
+     ser la hora del PASO 2.
+
+  IMPORTANTE: si dice "Fuente leida: CSV de ejemplo", NO se leyo el Data
+  Warehouse. Revisa el PASO 2 o usa el PLAN B.
+
+  Numeros que deberian aparecer arriba:
+      862 pagos | 35% atrasados | 62% de atrasos detectados
+      AUC 0.70  | 15 alumnos en el grupo "Morosos"
+
+
+---------------------------------------------------------------------
+PASO 5 - Prueba 1: los numeros coinciden con SQL
+---------------------------------------------------------------------
+QUE DECIR: "Calculo lo mismo directo en SQL, sin Python, y da igual."
+
+  En SSMS, nueva consulta, pega y presiona F5:
+
+      USE DW_EscuelasDeportivas;
+      SELECT MP.nombre_metodo_pago AS metodo,
+             COUNT(*) AS pagos,
+             SUM(CAST(H.pago_atrasado AS int)) AS atrasados,
+             CAST(100.0 * SUM(CAST(H.pago_atrasado AS int)) / COUNT(*) AS decimal(5,1)) AS pct_atraso
+      FROM H_PAGOS H
+      JOIN D_METODO_PAGO MP ON MP.id_metodo_pago = H.id_metodo_pago
+      GROUP BY MP.nombre_metodo_pago
+      ORDER BY pct_atraso DESC;
+
+  RESULTADO ESPERADO:
+      Efectivo 51.9 | Tarjeta 42.3 | QR 25.7 | Transferencia 23.3
+
+  Compara con el grafico 1 ("Pagos por metodo de pago") del dashboard.
+
+  Para categoria, cambia las lineas del JOIN y del GROUP BY por:
+
+      JOIN D_CATEGORIA C ON C.id_categoria = H.id_categoria
+      GROUP BY C.nombre_categoria
+      (y en el SELECT usa C.nombre_categoria AS categoria)
+
+  RESULTADO ESPERADO:
+      Sub-14 45.5 | Sub-8 43.5 | Sub-10 41.7 | Sub-16 25.9 | Sub-12 24.5
+
+  (Si preguntan por que cambio respecto de antes: el 13/10 se corrigieron
+  45 alumnos que estaban en una categoria que no era de su edad.)
+
+  Compara con el grafico 4 ("% de atraso por categoria").
+
+
+---------------------------------------------------------------------
+PASO 6 - Prueba 2: no hay numeros escritos a mano
+---------------------------------------------------------------------
+QUE DECIR: "Los numeros no estan escritos en el codigo; se calculan."
+
+  1. Abre en VS Code:  C:\Users\msi\Desktop\deportivva\mineria_pagos.py
+  2. Presiona Ctrl+F y busca:  0.69   -> no aparece.
+  3. Busca:  862                      -> no aparece.
+  4. Presiona Ctrl+G, escribe 758 y Enter: ahi estan las tarjetas del
+     dashboard, escritas con variables como {len(pagos)} y {mejor['auc']}.
+  5. Presiona Ctrl+G, escribe 147: ahi esta la consulta SQL a H_PAGOS.
+     En las lineas 69 y 70 estan el servidor y la base.
+
+
+---------------------------------------------------------------------
+PASO 7 - Prueba 3: el dashboard reacciona si cambian los datos
+---------------------------------------------------------------------
+QUE DECIR: "Si cambio los datos, cambian los graficos y las conclusiones.
+Lo hago en una copia para no tocar la base real."
+
+  Abre una terminal y escribe estos comandos, uno por uno (Enter despues
+  de cada uno):
+
+      cd C:\Users\msi\Desktop\prueba_dashboard
+      copy ..\deportivva\datos\h_pagos_ejemplo.csv datos\
+      python modificar_copia.py
+      python mineria_pagos.py --csv --no-abrir
+      python comparar.py
+
+  Que hace cada comando:
+      cd ...                 -> entra a la carpeta de prueba
+      copy ...               -> trae una copia limpia de los datos
+      modificar_copia.py     -> en la COPIA, marca 80 pagos con QR como atrasados
+      mineria_pagos.py ...   -> genera un dashboard de prueba con la copia (tarda ~20 s)
+      comparar.py            -> muestra los numeros: real vs prueba
+
+  RESULTADO ESPERADO de modificar_copia.py (antes y despues EN LA COPIA):
+      Antes : 802 pagos, 266 atrasados (33.2%) | QR atrasados: 25.7%
+      Despues: 802 pagos, 346 atrasados (43.1%) | QR atrasados: 56.8%
+
+  RESULTADO ESPERADO de comparar.py (aproximado):
+      % pagos atrasados   34.7% (real)  ->  43.1% (prueba)
+      % atraso con QR     25.7%         ->  56.8%
+      Mejor modelo        Regresion logistica -> Random Forest
+
+  OJO, PARA EXPLICARLO BIEN: el CSV datos\h_pagos_ejemplo.csv es una copia
+  de H_PAGOS del 05/10, con 802 pagos (antes de los 60 PRB-). Por eso la
+  columna "real" de comparar.py (862 pagos) no parte exactamente del mismo
+  dato: Efectivo sale 51.9% en el real y 50.8% en la prueba aunque la
+  prueba no lo toca. La comparacion limpia es la de modificar_copia.py:
+  ahi solo cambian los 80 pagos con QR (QR 25.7% -> 56.8%) y el resto
+  queda igual.
+
+  Para ver el dashboard de prueba, abre:
+      C:\Users\msi\Desktop\prueba_dashboard\resultados\dashboard.html
+
+  NOTA: si el comando "copy" pregunta si quieres reemplazar el archivo
+  (pasa en "cmd"), escribe S (o Y) y Enter. En la terminal de VS Code
+  lo reemplaza sin preguntar.
+
+
+---------------------------------------------------------------------
+PASO 8 - Mostrar que codigo genera cada grafico
+---------------------------------------------------------------------
+QUE DECIR: "Cada grafico sale de una libreria de Python."
+
+  En mineria_pagos.py usa Ctrl+G y el numero de linea:
+
+      Linea 207  -> Grafico 1, barras por metodo        (matplotlib)
+      Linea 230  -> Grafico 2, boxplot                  (seaborn)
+      Linea 258  -> Grafico 3, dispersion (scatter)     (matplotlib)
+      Linea 280  -> Grafico 4, barras por categoria     (matplotlib)
+      Linea 299  -> Grafico 5, mapa de calor            (seaborn)
+      Linea 478  -> Grafico 9, matriz de confusion      (scikit-learn + seaborn)
+      Linea 508  -> Grafico 10, curva ROC               (scikit-learn)
+      Linea 528  -> Grafico 11, importancia variables   (scikit-learn)
+      Linea 561  -> Grafico 12, arbol de decision       (scikit-learn)
+      Linea 607  -> Grafico 13, K-Means                 (scikit-learn)
+      Linea 808  -> riesgo por alumno (riesgo_alumnos.json, para la app)
+      Linea 861  -> datos de los graficos (datos_graficos.json, para la app)
+      Linea 901  -> patrones: PCA, silueta por grupo, similitud del coseno
+                    y matriz preparada (patrones.json, para la app)
+
+
+---------------------------------------------------------------------
+PASO 9 - Cerrar con lo que es real y lo que no
+---------------------------------------------------------------------
+QUE DECIR: "Lo real es el proceso: lee el Data Warehouse, calcula,
+entrena y evalua el modelo, y se puede repetir. Los datos son de ejemplo
+y simulados, asi que los resultados no describen a una escuela real."
+
+  (La justificacion de Python frente a Orange esta en el archivo
+  Explicacion_Data_Mining.txt, Parte B.)
+
+
+---------------------------------------------------------------------
+PASO 10 - (Opcional) Mostrar la app web
+---------------------------------------------------------------------
+QUE DECIR: "La escuela trabaja en una app web pensada para el celular,
+que usa la base en vivo; el analisis de Python aparece dentro de la app,
+con graficos interactivos."
+
+  1. En una terminal:
+         cd C:\Users\msi\Desktop\deportivva\app_escuela
+         python app.py
+     Muestra dos direcciones: una para esta computadora (localhost) y otra
+     para el celular (misma red WiFi, o la IP 100.x de Tailscale).
+  2. Abre http://localhost:5000 (o la direccion en el celular) e inicia
+     sesion como dueno.
+  3. Muestra:
+     - Inicio: botones grandes COBRAR e INSCRIBIR, Deudores, Alumnos y
+       "Cobrado hoy". Abajo, la seccion Analisis. En el celular, la barra
+       de abajo (Inicio, Cobrar, Inscribir, Alumnos, Mas).
+     - Inscribir: un solo formulario (nino, tutor y grupo). Al poner la
+       fecha de nacimiento solo quedan los grupos de su edad: la app NO
+       deja inscribir a un nino en una categoria que no es la suya.
+     - Grupos -> Horarios: el dueno pone dias, hora y lugar a varios
+       grupos a la vez; cada lugar tiene "Como llegar" (Google Maps).
+     - Grupos y Alumnos: cupos libres e inscripciones, EN VIVO desde la base.
+     - Cobrar: busca un alumno y toca "Cobrar Bs ..." (va directo a su
+       mensualidad mas antigua). El recibo tiene formato de factura con el
+       escudo de la escuela, pero dice RECIBO "(Sin derecho a credito
+       fiscal)": la escuela no tiene NIT.
+       OJO: si registras un cobro frente a la clase, es un pago REAL en la
+       base (recibo PAG-0001...). Se puede anular con motivo, pero no se
+       borra. Y el analisis dira "1 pago nuevo sin analizar" hasta que
+       vuelvas a ejecutar el SSIS.
+     - Reportes: Deudores (con dias de atraso y WhatsApp), Resumen de caja
+       (por metodo de pago, sin anulados) y Estado del sistema (si el
+       analisis esta al dia con la base). Se actualizan solos cada 45 s.
+     - Analisis: los mismos resultados del dashboard, dibujados en el
+       navegador (pasa el mouse sobre los graficos). Arriba dice
+       "Calculado el ..." con la hora del PASO 2. Seccion 2: la matriz
+       preparada (asi entran los datos al modelo). Seccion 4 "Patrones y
+       segmentos": PCA, silueta por grupo, similitud entre categorias y
+       el boton "Descargar segmentos (CSV)".
+     - Alertas de atraso: alumnos con riesgo Alto, Medio o Bajo, calculado
+       por el mismo modelo de mineria_pagos.py.
+  4. Si entras como entrenador, su inicio dice que entrena HOY, a que hora
+     y donde (con "Como llegar"). En Mi grupo solo ve los alumnos de su
+     grupo con "Al dia" o "Debe", sin telefonos, montos ni metodos de pago.
+     Usuarios de prueba: ver app_escuela\README.md.
+  5. Para apagar la app: Ctrl+C en la terminal.
+
+
+#####################################################################
+  PLAN B - Si el SSIS no actualiza el dashboard
+#####################################################################
+
+  Puedes generar el dashboard a mano desde la terminal (lee el Data
+  Warehouse igual):
+
+      cd C:\Users\msi\Desktop\deportivva
+      python mineria_pagos.py
+
+  Tarda unos 20 segundos y abre el dashboard solo en el navegador.
+  Revisa que el recuadro naranja diga "Fuente leida: Data Warehouse...".
+
+
+#####################################################################
+  PROBLEMAS COMUNES
+#####################################################################
+
+PROBLEMA: "python" no se reconoce como comando.
+  SOLUCION: usa la ruta completa, por ejemplo:
+            C:\Python314\python.exe mineria_pagos.py
+
+PROBLEMA: el dashboard dice "Fuente leida: CSV de ejemplo".
+  CAUSA:    Python no pudo conectarse al Data Warehouse.
+  SOLUCION: revisa que SQL Server este encendido (PASO 0.1) y vuelve a
+            ejecutar el SSIS o el PLAN B.
+
+PROBLEMA: ACTUALIZAR_DASHBOARD queda en rojo en Visual Studio.
+  SOLUCION: en Visual Studio abre la pestana "Progreso" y lee el mensaje
+            de error. Luego usa el PLAN B para tener el dashboard igual.
+
+PROBLEMA: aparece "no se pudo actualizar el Word porque esta abierto".
+  CAUSA:    el archivo Presentacion_Data_Mining.docx esta abierto.
+  SOLUCION: cierralo; el dashboard si se actualizo igual.
+
+PROBLEMA: en el PASO 3 sale 300 pagos en vez de 862.
+  CAUSA:    el SSIS no se ejecuto o fallo antes de H_PAGOS.
+  SOLUCION: repite el PASO 2 y revisa que todas las tareas queden en verde.
+
+PROBLEMA: Visual Studio no abre el paquete o muestra un error raro.
+  SOLUCION: hay copias de seguridad del paquete en la misma carpeta, con
+            nombres como Package.dtsx.respaldo_20261005_000349.
+
+PROBLEMA: la app web dice "No se pudo conectar con SQL Server".
+  SOLUCION: enciende SQL Server (PASO 0.1) y recarga la pagina.
+
+
+#####################################################################
+  SI QUIERES DESHACER LOS PAGOS SIMULADOS (despues de la clase)
+#####################################################################
+
+  Pagos SIM- (502): en SSMS, Archivo -> Abrir -> Archivo ->
+      C:\Users\msi\Desktop\deportivva\datos_prueba\quitar_pagos_prueba.sql
+  y presiona F5. Borra solo los pagos SIM- y lo relacionado.
+
+  Pagos PRB- (60): abre
+      C:\Users\msi\Desktop\deportivva\datos_prueba\pagos_prueba_60.sql
+  cambia @ACCION a 'BORRAR' y presiona F5.
+
+  Despues ejecuta otra vez el SSIS (PASO 2).

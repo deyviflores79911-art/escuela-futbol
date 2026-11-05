@@ -1,0 +1,37 @@
+{# Campo de formulario con su etiqueta y mensaje de error #}
+{% macro campo(nombre, etiqueta, valor='', tipo='text', errores={}, requerido=false, extra='') %}
+<div class="campo">
+  <label for="{{ nombre }}">{{ etiqueta }}{% if requerido %} <span class="obligatorio" aria-hidden="true">*</span>{% endif %}</label>
+  <input id="{{ nombre }}" name="{{ nombre }}" type="{{ tipo }}"
+         {% if tipo != 'password' %}value="{{ valor or '' }}"{% endif %}
+         {% if requerido %}required{% endif %} {{ extra|safe }}
+         {# En el celular: teclado numérico (con coma para montos) #}
+         {% if tipo == 'number' %}inputmode="{{ 'decimal' if '0.01' in extra else 'numeric' }}"{% endif %}
+         {% if errores.get(nombre) %}aria-invalid="true" aria-describedby="error-{{ nombre }}"{% endif %}>
+  {% if errores.get(nombre) %}<p class="error-campo" id="error-{{ nombre }}">{{ errores[nombre] }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{# Lista desplegable: opciones = [(valor, texto), ...] #}
+{% macro seleccion(nombre, etiqueta, opciones, valor='', errores={}, requerido=false, vacio='Elige una opción', extra='') %}
+<div class="campo">
+  <label for="{{ nombre }}">{{ etiqueta }}{% if requerido %} <span class="obligatorio" aria-hidden="true">*</span>{% endif %}</label>
+  <select id="{{ nombre }}" name="{{ nombre }}" {% if requerido %}required{% endif %} {{ extra|safe }}
+          {% if errores.get(nombre) %}aria-invalid="true" aria-describedby="error-{{ nombre }}"{% endif %}>
+    <option value="">{{ vacio }}</option>
+    {% for v, texto in opciones %}<option value="{{ v }}" {% if v|string == (valor or '')|string %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+  </select>
+  {% if errores.get(nombre) %}<p class="error-campo" id="error-{{ nombre }}">{{ errores[nombre] }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{# Pestañas de una sección: [(endpoint, texto), ...] #}
+{% macro pestanas(lista) %}
+<nav class="pestanas" aria-label="Secciones">
+  {% for endpoint, texto in lista %}
+    <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ texto }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}

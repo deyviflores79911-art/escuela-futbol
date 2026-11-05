@@ -1,0 +1,629 @@
+=====================================================================
+  INFORME COMPLETO DEL PROYECTO DE DATA MINING
+  Escuela de futbol - Business Intelligence & Big Data
+  Que se hizo, en que orden, por que y como interpretarlo
+  Periodo: 30/09/2026 al 05/10/2026
+=====================================================================
+
+COMO LEER ESTE INFORME
+  - Seccion 1: resumen corto (leelo primero).
+  - Seccion 2: el proyecto y su objetivo.
+  - Seccion 3: todo lo que se hizo, en orden, con el POR QUE de cada paso.
+  - Seccion 4: como estan las cosas HOY.
+  - Seccion 5: como funciona el sistema por dentro.
+  - Seccion 6: como interpretar los resultados (que significa cada numero).
+  - Seccion 7: decisiones importantes y por que se tomaron.
+  - Seccion 8: que es real y que no (honestidad).
+  - Seccion 9: lista de archivos y para que sirve cada uno.
+  - Seccion 10: como deshacer cada cosa.
+  - Seccion 11: problemas que aparecieron y como se resolvieron.
+
+Otros documentos que acompanan a este:
+  - Explicacion_Data_Mining.txt     -> pruebas de que el dashboard es real
+                                       y por que Python y no Orange.
+  - Pasos_para_la_demostracion.txt  -> guia paso a paso para la clase.
+  - MAPA_DEL_PROYECTO.md (carpeta principal) -> donde esta cada cosa hoy.
+
+
+#####################################################################
+  ACTUALIZACION 13-14/10/2026 (leer antes que el resto)
+#####################################################################
+
+DATOS
+  - Se encontro un error grave: 45 de los 107 alumnos estaban inscritos
+    en una categoria que no era de su edad (por ejemplo, ninos de 14
+    anos en Sub-8). 40 venian de los datos originales (AL-) y 5 de los
+    simulados. Con permiso, se paso a cada uno al grupo de su edad. Sus
+    pagos y deudas se fueron con ellos; las mensualidades viejas
+    conservan el precio del grupo anterior.
+  - Regla nueva en la app (sin excepciones, tampoco para el dueno): un
+    nino solo puede inscribirse en la categoria de su edad. Se valida al
+    inscribir, al editar la fecha de nacimiento, al cambiar el rango de
+    una categoria y al cambiar la categoria de un grupo.
+  - Entrenadores nuevos: Gabriel Cocarico Zambrana (Sub-8 A) y Victor
+    Hugo Lazo (Sub-16 A).
+  - Horarios: todos los grupos entrenan lunes, miercoles y viernes en la
+    Cancha Nuevo Palmar (Calle Luciano) y martes y jueves en el Club
+    Deportivo Huracan del Sur, de 15:00 a 16:30. Los horarios anteriores
+    quedaron desactivados (no se borraron).
+
+ANALISIS DEL 14/10/2026 09:26 (despues de ejecutar el SSIS)
+  - Total igual: 862 pagos, 299 atrasados (34,7 %).
+  - Por categoria cambio (por la correccion): Sub-14 45,5 % | Sub-8
+    43,5 % | Sub-10 41,7 % | Sub-16 25,9 % | Sub-12 24,5 %.
+  - Mejor modelo: Regresion logistica con balanceo, F1 0,57, AUC 0,70 en
+    validacion cruzada y 0,74 con alumnos nuevos; detecta 2 de cada 3
+    atrasos. Riesgo: 38 Alto, 34 Medio, 35 Bajo.
+  - Nuevo en mineria_pagos.py (solo se AGREGO un bloque al final, linea
+    901): resultados\patrones.json con segmentacion PCA (2 ejes = 54 %
+    de la informacion), silueta por grupo (Puntuales 0,65, Ocasionales
+    0,61, Morosos 0,72), similitud del coseno entre categorias (Sub-8 y
+    Sub-10 las mas parecidas, 0,98) y una muestra de la matriz
+    preparada. Los numeros completos estan en
+    CRISP-DM_fases_del_proyecto.txt.
+
+APP WEB
+  - Pensada para el CELULAR: barra de abajo (Inicio, Cobrar, Inscribir,
+    Alumnos, Mas), tablas convertidas en tarjetas, botones grandes,
+    instalable como app (icono con el escudo de la escuela). Se entra
+    desde el celular por la red WiFi o por Tailscale.
+  - Marca "Escuela de Futbol Fortaleza" (Santa Cruz de la Sierra).
+  - Inscribir en un solo paso (nino + tutor + grupo).
+  - Cobrar directo desde la busqueda.
+  - Recibo con formato de factura y el escudo, pero como RECIBO: la
+    escuela no tiene NIT, asi que no puede emitir facturas.
+  - Pantalla Horarios (dias, hora y lugar a varios grupos a la vez) y
+    lugares con su enlace de Google Maps ("Como llegar").
+  - Pantalla Analisis: nueva seccion "Patrones y segmentos" (PCA, silueta
+    por grupo, similitud y descarga de segmentos en CSV).
+  - 116 pruebas automaticas, todas pasan (14/10/2026).
+
+
+#####################################################################
+  ACTUALIZACION 12/10/2026
+#####################################################################
+
+Las secciones 1 a 11 cuentan lo que se hizo del 30/09 al 05/10; sus
+numeros (802 pagos, 33 %, AUC 0.68...) eran los de esas fechas. Despues
+cambio esto:
+
+DATOS
+  - El 05/10 se agregaron 60 pagos simulados mas (recibos PRB-, alumnos
+    PRB-AL-) con datos_prueba\pagos_prueba_60.sql.
+  - Hoy la base y el Data Warehouse tienen 862 pagos: 300 de ejemplo
+    (REC-) y 562 simulados (502 SIM- y 60 PRB-).
+  - Resultado actual: 35 % de pagos atrasados (299); el mejor modelo es
+    Regresion logistica con balanceo: detecta el 62 % de los atrasos con
+    AUC 0.69. K-Means: 34 Puntuales, 58 Ocasionales y 15 Morosos.
+
+MINERIA (mineria_pagos.py)
+  - Se corrigio el conteo de simulados: ahora cuenta SIM- y PRB- (antes
+    solo SIM-). El dashboard y el Word dicen "300 de ejemplo y 562
+    simulados".
+  - Se agregaron dos salidas nuevas en resultados\, sin cambiar lo que ya
+    generaba: riesgo_alumnos.json (riesgo de atraso Alto/Medio/Bajo por
+    alumno) y datos_graficos.json (datos para dibujar los graficos).
+    Las usa la app web.
+
+APP WEB (app_escuela\, Flask)
+  - Nueva aplicacion para el dia a dia de la escuela, sobre la base
+    transaccional: inicio de sesion con roles (dueno y entrenador),
+    usuarios entrenadores, grupos, categorias, horarios, tutores, alumnos
+    e inscripciones (en vivo).
+  - Pantallas "Analisis" (los mismos resultados del dashboard, con
+    graficos interactivos) y "Alertas de atraso" (reemplaza al viejo
+    sistema_alerta_pagos.py). Ambas se actualizan al ejecutar el SSIS.
+  - Pendiente: mensualidades, cobros, recibos y reportes.
+
+ORDEN DE ARCHIVOS (11/10)
+  - Los .sql originales estan en sql_originales\, los scripts de pagos de
+    prueba en datos_prueba\ y estos textos en documentos\.
+  - sistema_alerta_pagos.py, alerta_pagos.html, datos_realistas.py,
+    sistema_web\ (app Django a medias) y respaldos\ se movieron a
+    _para_eliminar\. Las secciones 9 y 10 todavia los nombran: la
+    ubicacion actual esta en MAPA_DEL_PROYECTO.md.
+
+
+#####################################################################
+  1. RESUMEN CORTO
+#####################################################################
+
+- Se construyo un ejemplo de Data Mining en Python que LEE el Data
+  Warehouse DW_EscuelasDeportivas (tabla H_PAGOS), entrena modelos para
+  predecir que pagos llegan atrasados y genera 13 graficos, un dashboard
+  HTML y un documento Word.
+- Se sigue la metodologia CRISP-DM (6 fases).
+- El script se ejecuta solo al final del paquete SSIS (tarea
+  ACTUALIZAR_DASHBOARD). Esto ya se comprobo: el SSIS lo regenero el
+  05/10/2026 a las 00:37.
+- La base tiene 802 pagos: 300 son los datos de ejemplo entregados
+  (recibos REC-) y 502 son pagos SIMULADOS agregados para probar el
+  modelo (recibos SIM-).
+- Resultado actual: 33 % de pagos atrasados; el mejor modelo detecta el
+  63 % de los atrasos con AUC 0.68 (modesto, pero mejor que el azar).
+- Todos los numeros se calculan desde los datos (comprobado en SQL).
+  Lo REAL es el proceso; los datos son de ejemplo y simulados.
+
+
+#####################################################################
+  2. EL PROYECTO Y SU OBJETIVO
+#####################################################################
+
+Lo que ya tenias construido antes de empezar:
+  Sistema_EscuelasDeportivas  (base transaccional en SQL Server)
+          |
+          v
+  Paquete SSIS (ETL_EscuelasDeportivas, en Visual Studio)
+          |
+          v
+  DW_EscuelasDeportivas (esquema estrella)
+     Dimensiones: D_ALUMNO, D_CATEGORIA, D_METODO_PAGO, D_ESTADO_PAGO,
+                  D_TIEMPO
+     Hechos:      H_PAGOS (un registro = un pago)
+
+Lo que pidio la ingeniera:
+  "Presentacion de herramientas para implementar Data Mining, con un
+  ejemplo preliminar", hecho en Python con librerias de graficos.
+
+Objetivo del ejemplo:
+  Predecir que pagos de mensualidad van a llegar ATRASADOS y entender que
+  factores influyen (metodo de pago, categoria, monto, historial), para
+  que la escuela avise a los tutores antes del vencimiento.
+
+Servidor: localhost\MSSQLSERVER01 (en SSMS: .\MSSQLSERVER01)
+
+
+#####################################################################
+  3. LO QUE SE HIZO, EN ORDEN, Y POR QUE
+#####################################################################
+
+---------------------------------------------------------------------
+FASE 1 - Explicacion de herramientas y primer ejemplo (30/09)
+---------------------------------------------------------------------
+QUE:    Se explicaron las herramientas (Python, R, Orange, Weka,
+        RapidMiner, Power BI/SSAS). Se ejecuto el script que pegaste,
+        que INVENTABA 300 pagos con numeros al azar (no se conectaba a
+        nada). Se instalaron pandas y scikit-learn.
+RESULTADO: 72 % de exactitud, pero NO detecto ninguno de los 19 pagos
+        atrasados del examen: casi siempre decia "a tiempo".
+POR QUE PASO: habia 3 pagos a tiempo por cada atrasado (desbalance de
+        clases) y el modelo favorecia a la mayoria. Con
+        class_weight="balanced" detecto 14 de 19.
+LECCION: la exactitud sola enganna; hay que mirar la matriz de confusion.
+
+---------------------------------------------------------------------
+FASE 2 - Conexion real al Data Warehouse (30/09)
+---------------------------------------------------------------------
+QUE:    Se creo una version que SI se conecta al Data Warehouse con la
+        libreria pyodbc y lee H_PAGOS.
+RESULTADO: con tus datos originales (300 pagos, 129 atrasados = 43 %)
+        el modelo acerto solo 46,7 %, peor que decir siempre "a tiempo"
+        (57 %).
+POR QUE: se reviso la base y los pagos originales siguen una formula
+        repetitiva: todos los metodos y categorias se atrasan casi igual
+        (42-44 %), los dias de atraso van en ciclo (-3,-2,-1,0,1,2,3) y
+        el metodo de pago rota. No hay patron que aprender.
+
+---------------------------------------------------------------------
+FASE 3 - Hacerlo visual (30/09)
+---------------------------------------------------------------------
+QUE:    Como la salida en la terminal era dificil de entender, se
+        crearon graficos PNG y luego una pagina web con los pasos.
+POR QUE: para poder ver y explicar el proceso sin leer texto plano.
+(Estos archivos se reemplazaron despues por el dashboard de la fase 7.)
+
+---------------------------------------------------------------------
+FASE 4 - Primer intento de datos "realistas" (30/09)
+---------------------------------------------------------------------
+QUE:    Con tu permiso se cambiaron la fecha y el metodo de pago de los
+        300 pagos (script datos_realistas.py), guardando antes una copia
+        en una tabla de respaldo. Se recargo el Data Warehouse y se
+        creo un sistema de alerta (sistema_alerta_pagos.py) que predice
+        quien pagara tarde el mes siguiente usando el HISTORIAL de cada
+        alumno.
+RESULTADO: 83 % de aciertos (contra 64 % sin modelo).
+NOTA:   Esta fase se DESHIZO despues (fase 9).
+
+---------------------------------------------------------------------
+FASE 5 - Analisis del enunciado del practico (30/09)
+---------------------------------------------------------------------
+QUE:    Se comparo el enunciado con tu paquete SSIS.
+HALLAZGOS:
+  - DIAS_ATRASO: el enunciado pide 0 cuando se paga a tiempo; tu paquete
+    guardaba numeros negativos. (Se corrigio en la fase 9.)
+  - Reporte 3.3 pide mostrar el tutor, pero D_ALUMNO no tiene tutor.
+  - El resto (orden de tareas, consultas, Lookups) coincidia.
+
+---------------------------------------------------------------------
+FASE 6 - Limpieza de archivos (30/09 y 04/10)
+---------------------------------------------------------------------
+QUE:    Los archivos de las fases 1 a 3 se movieron a "anteriores" y
+        despues, a tu pedido, se borraron.
+POR QUE: habia demasiados archivos y confundian.
+
+---------------------------------------------------------------------
+FASE 7 - Proyecto completo con CRISP-DM (04/10)
+---------------------------------------------------------------------
+QUE:    Se creo mineria_pagos.py (el script principal) y
+        documento_word.py. Generan:
+          - 13 graficos PNG (exploracion, modelos, evaluacion, K-Means)
+          - dashboard.html (todo en una pagina)
+          - metricas.json (los numeros)
+          - Presentacion_Data_Mining.docx (documento Word)
+        Se instalaron matplotlib, seaborn y python-docx.
+POR QUE: tu pedido completo: CRISP-DM, graficos de exploracion, arbol de
+        decision comparado con otros modelos, validacion cruzada, curva
+        ROC, importancia de variables, balanceo de clases, K-Means,
+        dashboard profesional y Word.
+DETALLES DE CALIDAD:
+  - Paleta de colores comprobada con un validador para daltonismo.
+  - Se reviso cada grafico como imagen y se corrigieron textos encimados.
+  - Si no hay conexion al Data Warehouse, usa un CSV de respaldo y el
+    dashboard lo dice.
+
+---------------------------------------------------------------------
+FASE 8 - Actualizacion automatica desde el SSIS (04/10)
+---------------------------------------------------------------------
+QUE:    Se agrego al final de tu paquete la tarea "Ejecutar proceso"
+        ACTUALIZAR_DASHBOARD (flecha verde desde H_PAGOS). Ejecuta:
+          C:\Python314\python.exe -X utf8 ...\mineria_pagos.py --no-abrir
+        Antes se hizo una copia de Package.dtsx. Solo se agregaron 52
+        lineas; no se cambio ninguna tarea existente.
+        Tambien se hizo que el script no falle si el Word esta abierto.
+POR QUE: el dashboard era estatico; ahora se actualiza cada vez que
+        cargas el Data Warehouse.
+        "-X utf8" evita errores con tildes; "--no-abrir" evita que se
+        abra el navegador en cada ejecucion.
+
+---------------------------------------------------------------------
+FASE 9 - Volver a los datos del documento (05/10)
+---------------------------------------------------------------------
+QUE:    A tu pedido se dejo la base "tal cual" el documento:
+          - Se restauraron las fechas y metodos ORIGINALES de los 300
+            pagos (comprobado columna por columna: 129 atrasados).
+          - Se elimino la tabla de respaldo que se habia agregado (sus
+            datos se guardaron antes en un CSV, en respaldos\).
+          - Se cambio en el paquete SOLO la formula de DIAS_ATRASO por la
+            del documento (seccion 6.5.11):
+              fecha_pago > fecha_vencimiento ? (DT_I4)DATEDIFF(...) : 0
+          - Se recargo el Data Warehouse.
+          - Los avisos del dashboard y del Word se corrigieron para decir
+            la verdad sobre los datos.
+RESULTADO con los datos originales: AUC 0,66; todos los metodos se
+        atrasan igual (43-44 %).
+
+---------------------------------------------------------------------
+FASE 10 - 502 pagos simulados para probar el modelo (05/10)
+---------------------------------------------------------------------
+QUE:    A tu pedido se AGREGARON filas (solo INSERT, sin cambiar nada
+        existente) con generar_pagos_prueba.py, semilla 42:
+            TUTOR 28 | ALUMNO 47 | INSCRIPCION 47 | MENSUALIDAD 502 |
+            PAGO 502
+        Marcas: recibos "SIM-0001..." y codigos de alumno "SIM-AL-001...".
+        Patrones programados:
+          - familias puntuales, irregulares y morosas
+          - Transferencia y QR mas puntuales; Efectivo y Tarjeta menos
+          - quien se atraso el mes anterior tiende a atrasarse otra vez
+          - pagos parciales, atrasos de mas de 15 dias, descuento por
+            hermano, 12 meses (oct-2025 a sep-2026)
+        Se calibro para tener 30-35 % de atrasos en total y un AUC lejos
+        de 1.0 (que el modelo NO acierte todo).
+VERIFICADO: 802 pagos, 266 atrasados (33,2 %), cero llaves huerfanas,
+        cero duplicados, ningun grupo sobre su cupo, los 300 originales
+        intactos.
+EXTRA:  quitar_pagos_prueba.sql para deshacerlo.
+
+---------------------------------------------------------------------
+FASE 11 - Pruebas de que el dashboard es real (05/10)
+---------------------------------------------------------------------
+QUE:    Se comprobo:
+          - Ningun resultado esta escrito a mano en el codigo.
+          - Los porcentajes calculados directo en SQL coinciden
+            exactamente con los del dashboard.
+          - Cambiando una COPIA de los datos (carpeta prueba_dashboard),
+            el dashboard cambia (33,2 % -> 43,1 % de atrasos).
+        Todo esta en Explicacion_Data_Mining.txt.
+
+---------------------------------------------------------------------
+FASE 12 - Guia para la demostracion (05/10)
+---------------------------------------------------------------------
+QUE:    Pasos_para_la_demostracion.txt, con cada paso, el comando y el
+        resultado esperado.
+
+---------------------------------------------------------------------
+FASE 13 - Comprobacion del SSIS (05/10)
+---------------------------------------------------------------------
+QUE:    Ejecutaste el SSIS a las 00:37. El dashboard SI se regenero a las
+        00:37:13 desde el Data Warehouse. La hora vieja (00:18) que viste
+        era una pestana del navegador sin recargar.
+        Ejecutado desde la terminal con los mismos argumentos: termino
+        bien (codigo 0) en 20,2 segundos.
+CONSEJO: despues de correr el SSIS, cerrar la pestana y abrir de nuevo el
+        dashboard, o presionar Ctrl+F5.
+
+
+#####################################################################
+  4. COMO ESTAN LAS COSAS HOY
+#####################################################################
+
+BASE TRANSACCIONAL (Sistema_EscuelasDeportivas)
+  - Estructura: igual que la entregada (sin tablas ni columnas nuevas).
+  - 300 pagos originales (REC-) sin modificar: 129 atrasados (43 %).
+  - 502 pagos simulados (SIM-): 137 atrasados (27,3 %).
+  - Total: 802 pagos, 266 atrasados (33,2 %).
+
+DATA WAREHOUSE (DW_EscuelasDeportivas)
+  - Cargado por TU paquete SSIS el 05/10 a las 00:37.
+  - H_PAGOS: 802 pagos | D_ALUMNO: 97 | D_TIEMPO: 173 fechas.
+  - dias_atraso entre 0 y 25 (0 = pago a tiempo, como pide el documento).
+
+PAQUETE SSIS (Package.dtsx) - dos cambios respecto del original:
+  1. Tarea nueva ACTUALIZAR_DASHBOARD al final (la pediste tu; no esta en
+     el enunciado).
+  2. Formula de DIAS_ATRASO igual a la del enunciado.
+
+DASHBOARD
+  - resultados\dashboard.html, generado desde el Data Warehouse.
+  - El pie dice 00:46 porque se volvio a ejecutar desde la terminal para
+    medir el tiempo (mismos datos y mismos numeros que la version del
+    SSIS de las 00:37, que quedo copiada en respaldos\).
+
+LIBRERIAS DE PYTHON INSTALADAS (para tu usuario de Windows)
+  pandas, scikit-learn, pyodbc, matplotlib, seaborn, python-docx
+  y pymupdf (este ultimo solo se uso para revisar como se veia el Word).
+
+
+#####################################################################
+  5. COMO FUNCIONA EL SISTEMA POR DENTRO
+#####################################################################
+
+FLUJO COMPLETO
+  1. Registras pagos en Sistema_EscuelasDeportivas.
+  2. Ejecutas el SSIS: LIMPIAR -> CREAR -> dimensiones -> H_PAGOS.
+  3. Al final, ACTUALIZAR_DASHBOARD ejecuta mineria_pagos.py.
+  4. El script lee H_PAGOS, calcula todo y reescribe resultados\.
+  5. Abres resultados\dashboard.html.
+
+EL SCRIPT mineria_pagos.py, FASE POR FASE (CRISP-DM)
+  1. Comprension del negocio: el objetivo (comentarios del codigo).
+  2. Comprension de los datos: lee H_PAGOS con sus dimensiones y dibuja
+     5 graficos de exploracion.
+  3. Preparacion: elige las variables que se conocen ANTES del
+     vencimiento: categoria, metodo de pago, monto y "% de atrasos
+     previos" del alumno. Deja fuera monto pagado, saldo y dias de
+     atraso, porque se conocen despues de pagar (seria hacer trampa).
+     El primer pago de cada alumno no tiene historial y se excluye.
+  4. Modelado: 3 modelos (arbol de decision, Random Forest, regresion
+     logistica), cada uno sin y con balanceo de clases. Validacion
+     cruzada de 5 partes SEPARANDO POR ALUMNO.
+  5. Evaluacion: examen con 25 % de alumnos que el modelo no vio:
+     matriz de confusion, curva ROC, importancia de variables y el arbol
+     dibujado.
+  6. Despliegue: K-Means agrupa alumnos por comportamiento; se escriben
+     las conclusiones, el dashboard, metricas.json y el Word.
+
+LOS 13 GRAFICOS
+   1 Pagos por metodo (barras)       8 Comparacion de modelos
+   2 Dias de atraso por categoria    9 Matriz de confusion
+     (boxplot)                      10 Curva ROC
+   3 Monto vs dias (dispersion)     11 Importancia de variables
+   4 % de atraso por categoria      12 Arbol de decision
+   5 Mapa de calor categoria/metodo 13 Grupos K-Means
+   6 Balance de clases
+   7 Antes/despues del balanceo
+
+
+#####################################################################
+  6. COMO INTERPRETAR LOS RESULTADOS
+#####################################################################
+
+QUE SIGNIFICA CADA METRICA
+  Exactitud     De todos los pagos, que % predijo bien.
+  Sensibilidad  De los pagos que SI se atrasaron, que % detecto.
+                (La mas importante para la escuela.)
+  Precision     De los que marco como atrasados, que % realmente lo fue.
+  F1            Un numero que equilibra sensibilidad y precision.
+  AUC           Que tan bien ordena de mas a menos riesgo.
+                0,5 = adivinar al azar | 1,0 = perfecto.
+                Un AUC cercano a 1,0 con datos asi seria sospechoso.
+  Linea base    Lo que acertaria sin modelo, diciendo siempre "a tiempo".
+                Un modelo util debe superarla en algo.
+
+NUMEROS ACTUALES (802 pagos)
+  % atrasados                 33 %
+  Mejor modelo                Regresion logistica con balanceo
+  Atrasos detectados          63 % (validacion cruzada)
+  AUC                         0,68
+  Exactitud                   65 % (linea base: 66 %)
+  Examen con alumnos nuevos   detecto 41 de 61 atrasos
+  Grupos K-Means              32 puntuales (11 % atrasos)
+                              54 ocasionales (43 %)
+                              11 morosos (76 %)
+  Variable mas importante     % de atrasos previos (el historial)
+  Metodos                     Efectivo 51 %, Tarjeta 40 %,
+                              QR 26 %, Transferencia 23 %
+
+COMO LEERLOS
+  - El modelo es MODESTO: detecta 63 de cada 100 atrasos y ordena mejor
+    que el azar (AUC 0,68), pero su exactitud no supera la linea base.
+  - No sube mas porque los 300 pagos originales no tienen patron y
+    "diluyen" los simulados. Probando solo con los 502 simulados, el
+    arbol dio AUC 0,77.
+  - El historial pesa mas que todo: quien se atraso antes, se vuelve a
+    atrasar. Es logico y es lo que mira un cobrador real.
+  - La diferencia por metodo es real EN ESTOS DATOS porque se programo en
+    los simulados.
+  - La diferencia por categoria (Sub-8 contra Sub-16) salio por AZAR: no
+    se programo. No hay que presentarla como hallazgo.
+
+EVOLUCION DE LOS RESULTADOS (para no confundirse)
+  Version                              % atraso   Detectados   AUC
+  -----------------------------------  ---------  -----------  -----
+  Datos simulados de la fase 4/7       33 %       63 %         0,88
+  Solo los 300 originales (fase 9)     43 %       72 %         0,66
+  Actual: 300 originales + 502 SIM     33 %       63 %         0,68
+  (Los numeros "0,88" y "12 morosos" son de una version vieja.)
+
+
+#####################################################################
+  7. DECISIONES IMPORTANTES Y POR QUE
+#####################################################################
+
+- PYTHON: se conecta directo a SQL Server, se automatiza dentro del SSIS,
+  es reproducible, gratuito, estandar en la industria y lo pidio la
+  ingeniera. (Detalle en Explicacion_Data_Mining.txt, Parte B.)
+- VARIABLES SOLO "DE ANTES DEL PAGO": para que la prediccion sirva en la
+  vida real y no haga trampa.
+- SEPARAR POR ALUMNO EN LA VALIDACION: si el mismo alumno estuviera en el
+  entrenamiento y en el examen, el resultado saldria inflado.
+- BALANCEO DE CLASES: hay 2 pagos a tiempo por cada atrasado; sin
+  balanceo el modelo deja pasar mas atrasos.
+- ELEGIR EL MODELO POR F1: equilibra detectar atrasos y no dar demasiadas
+  falsas alarmas.
+- K = 3 GRUPOS: elegido a mano porque es facil de usar para la escuela;
+  el grafico de silueta muestra si otro numero separa mejor.
+- SEMILLA 42: para que cada ejecucion con los mismos datos de lo mismo.
+- MARCAR LOS SIMULADOS CON "SIM-": para distinguirlos y poder borrarlos
+  sin tocar los originales.
+- COPIAS ANTES DE CADA CAMBIO: para poder volver atras siempre.
+
+
+#####################################################################
+  8. QUE ES REAL Y QUE NO
+#####################################################################
+
+ES REAL
+  - La conexion al Data Warehouse y la lectura de H_PAGOS.
+  - Los calculos (coinciden con SQL).
+  - El entrenamiento y la evaluacion de los modelos.
+  - La actualizacion automatica al final del SSIS (comprobada el 05/10).
+
+NO ES REAL
+  - Ningun pago es de una escuela verdadera.
+  - Los 300 pagos REC- son datos de ejemplo con un patron repetitivo.
+  - Los 502 pagos SIM- son simulados; sus patrones se programaron, asi que
+    el modelo "descubre" lo que se puso en los datos.
+
+LIMITACIONES QUE HAY QUE SABER
+  - En los graficos 2, 3 y 13 los puntos se desplazan un poco al azar
+    para que no se encimen ("jitter"): la posicion exacta no es el valor
+    exacto.
+  - Los nombres "Puntuales/Ocasionales/Morosos" se asignan ordenando los
+    grupos; "Morosos" no es la regla del practico (2 o mas atrasos).
+  - Algunas frases de las conclusiones usan umbrales elegidos a mano
+    (ej.: "influye poco" si la diferencia es menor a 15 puntos).
+  - El grafico 1 es de barras de conteo, no un histograma.
+  - Las librerias estan instaladas para tu usuario de Windows; el
+    paquete funciona ejecutandolo desde Visual Studio con tu usuario.
+
+FRASE PARA DECIR: "Lo real es el proceso: lee el Data Warehouse, calcula,
+entrena y evalua, y se puede repetir. Los datos son de ejemplo y
+simulados, asi que los resultados no describen una escuela real."
+
+
+#####################################################################
+  9. ARCHIVOS Y PARA QUE SIRVE CADA UNO
+#####################################################################
+
+Carpeta C:\Users\msi\Desktop\deportivva
+
+NOTA (11/10/2026): el proyecto se ordeno en carpetas. Esta lista es la
+del 05/10; la ubicacion ACTUAL de cada archivo esta en MAPA_DEL_PROYECTO.md
+(carpeta principal del proyecto).
+
+PRINCIPALES (los que usas)
+  mineria_pagos.py               Script principal: lee el DW, entrena,
+                                 genera graficos, dashboard y Word.
+  documento_word.py              Arma el Word con los numeros reales.
+  generar_pagos_prueba.py        Genero los 502 pagos simulados
+                                 (--quitar los borra).
+  quitar_pagos_prueba.sql        Borra los pagos simulados desde SSMS.
+  resultados\                    13 PNG, dashboard.html, metricas.json,
+                                 Presentacion_Data_Mining.docx.
+  datos\h_pagos_ejemplo.csv      Respaldo de datos si no hay conexion.
+
+DOCUMENTOS DE APOYO
+  Informe_completo_del_proyecto.txt   Este informe.
+  Explicacion_Data_Mining.txt         Pruebas y justificacion de Python.
+  Pasos_para_la_demostracion.txt      Guia para la clase.
+
+ARCHIVOS VIEJOS (cuidado)
+  sistema_alerta_pagos.py / alerta_pagos.html
+      Sistema de alerta de la fase 4. La pagina es del 05/10 a las 00:07,
+      ANTES de agregar los pagos simulados: esta desactualizada. Si la
+      quieres al dia: python sistema_alerta_pagos.py
+  datos_realistas.py
+      NO EJECUTAR: volveria a cambiar las fechas y metodos de tus 300
+      pagos originales.
+
+ARCHIVOS TUYOS (no los cree yo)
+  Sistema_EscuelasDeportivas (4).sql, DW_EscuelasDeportivas (2).sql
+
+COPIAS DE SEGURIDAD (carpeta respaldos\)
+  PAGO_original_*.csv                 Los 300 pagos originales.
+  PAGO_con_datos_simulados_*.csv      La version modificada de la fase 4.
+  resultados_*\                       Versiones anteriores del dashboard.
+  mineria_pagos_*.py, documento_word_*.py, h_pagos_ejemplo_*.csv
+                                      Versiones anteriores de los scripts.
+
+Paquete SSIS (C:\Users\msi\source\repos\ETL_EscuelasDeportivas\
+ETL_EscuelasDeportivas\)
+  Package.dtsx                            Version actual.
+  Package.dtsx.respaldo_20261004_235209   Antes de ACTUALIZAR_DASHBOARD.
+  Package.dtsx.respaldo_20261005_000349   Antes de cambiar DIAS_ATRASO.
+  Package.dtsx.respaldo_20261005_000416   (igual a la anterior)
+
+Carpeta de prueba: C:\Users\msi\Desktop\prueba_dashboard
+  Copia para demostrar que el dashboard reacciona a los datos. Se puede
+  borrar cuando ya no se necesite.
+
+
+#####################################################################
+  10. COMO DESHACER CADA COSA
+#####################################################################
+
+QUITAR LOS 502 PAGOS SIMULADOS
+  En SSMS abrir datos_prueba\quitar_pagos_prueba.sql y presionar F5
+  (o en la terminal: python datos_prueba\generar_pagos_prueba.py --quitar).
+  Despues ejecutar el SSIS.
+
+QUITAR LA TAREA ACTUALIZAR_DASHBOARD
+  En Visual Studio: clic derecho sobre la tarea -> Eliminar -> Guardar.
+  (O restaurar Package.dtsx.respaldo_20261004_235209, pero ese respaldo
+  tampoco tiene la correccion de DIAS_ATRASO.)
+
+VOLVER A LA FORMULA ANTERIOR DE DIAS_ATRASO
+  Restaurar Package.dtsx.respaldo_20261005_000349 (si tiene la tarea
+  ACTUALIZAR_DASHBOARD, pero no la correccion).
+
+VOLVER A UN DASHBOARD ANTERIOR
+  Copiar el contenido de la carpeta respaldos\resultados_... deseada
+  dentro de resultados\.
+
+
+#####################################################################
+  11. PROBLEMAS QUE APARECIERON Y COMO SE RESOLVIERON
+#####################################################################
+
+- Faltaban librerias de Python      -> se instalaron con pip.
+- El modelo no detectaba atrasos     -> era desbalance de clases; se
+                                        uso class_weight="balanced".
+- Los datos originales no tenian     -> se agregaron pagos simulados
+  patron                                (marcados SIM-) en vez de
+                                        modificar los originales.
+- El SSIS no se puede ejecutar fuera -> dtexec da el error 0x80040154 en
+  de Visual Studio en este equipo       este equipo. En las fases 4 y 9
+                                        el DW se recargo con SQL
+                                        equivalente al paquete; desde el
+                                        05/10 a las 00:37 lo carga TU SSIS.
+- Si el Word esta abierto, el        -> el script ahora avisa y sigue;
+  script fallaba                        el dashboard se actualiza igual.
+- La ventana de Python se cierra     -> es normal: se cierra al terminar.
+  sola                                  La prueba de que termino es la
+                                        hora de dashboard.html y del Word.
+- El navegador mostraba la hora      -> pestana sin recargar: cerrar y
+  vieja                                 abrir de nuevo, o Ctrl+F5.
+
+=====================================================================
+  FIN DEL INFORME
+=====================================================================

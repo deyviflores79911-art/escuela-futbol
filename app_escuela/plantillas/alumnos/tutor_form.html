@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf %}
+{% block titulo %}{{ 'Editar tutor' if id_tutor else 'Nuevo tutor' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('alumnos.tutor', id_tutor=id_tutor) if id_tutor else url_for('alumnos.tutores') }}">← Volver</a></p>
+<section class="tarjeta">
+  <h1>{{ 'Editar tutor' if id_tutor else 'Nuevo tutor' }}</h1>
+  <form method="post">
+    {{ csrf() }}
+    <div class="dos-columnas">
+      {{ campo('nombres', 'Nombres', form.get('nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
+      {{ campo('apellidos', 'Apellidos', form.get('apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
+      {{ campo('ci', 'CI', form.get('ci'), errores=errores, extra='maxlength="20"') }}
+      {{ campo('telefono', 'Teléfono', form.get('telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+      {{ campo('whatsapp', 'WhatsApp', form.get('whatsapp'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+      {{ campo('correo', 'Correo', form.get('correo'), tipo='email', errores=errores, extra='maxlength="100"') }}
+      {{ campo('direccion', 'Dirección', form.get('direccion'), errores=errores, extra='maxlength="200"') }}
+    </div>
+    <div class="botones">
+      <button type="submit" class="boton">Guardar</button>
+      <a class="boton boton-claro" href="{{ url_for('alumnos.tutor', id_tutor=id_tutor) if id_tutor else url_for('alumnos.tutores') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

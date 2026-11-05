@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf %}
+{% block titulo %}Mi contraseña{% endblock %}
+{% block contenido %}
+<section class="tarjeta tarjeta-angosta">
+  <h1>Cambiar mi contraseña</h1>
+  <form method="post">
+    {{ csrf() }}
+    {# Para los gestores de contraseñas: a qué cuenta pertenece la clave #}
+    <input type="text" name="usuario" value="{{ usuario.correo }}" autocomplete="username" hidden>
+    {{ campo('actual', 'Contraseña actual', tipo='password', errores=errores, requerido=true, extra='autocomplete="current-password"') }}
+    {{ campo('nueva', 'Contraseña nueva (mínimo 8)', tipo='password', errores=errores, requerido=true, extra='minlength="8" autocomplete="new-password"') }}
+    {{ campo('repetir', 'Repite la contraseña nueva', tipo='password', errores=errores, requerido=true, extra='minlength="8" autocomplete="new-password"') }}
+    <button type="submit" class="boton">Guardar</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf %}
+{% block titulo %}Editar entrenador{% endblock %}
+{% block contenido %}
+<section class="tarjeta">
+  <h1>Editar a {{ u.nombres }} {{ u.apellidos or '' }}</h1>
+  <p class="ayuda">Correo: <strong>{{ u.correo }}</strong> (no se cambia: es el enlace con su ficha de entrenador).</p>
+  <form method="post">
+    {{ csrf() }}
+    <div class="dos-columnas">
+      {{ campo('nombres', 'Nombres', form.get('nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
+      {{ campo('apellidos', 'Apellidos', form.get('apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
+      {{ campo('telefono', 'Teléfono', form.get('telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+    </div>
+    <fieldset class="grupo-campos">
+      <legend>Nueva contraseña (déjala vacía para no cambiarla)</legend>
+      <div class="dos-columnas">
+        {{ campo('clave', 'Contraseña nueva', tipo='password', errores=errores, extra='minlength="8" autocomplete="new-password"') }}
+        {{ campo('repetir', 'Repite la contraseña', tipo='password', errores=errores, extra='minlength="8" autocomplete="new-password"') }}
+      </div>
+    </fieldset>
+    <div class="botones">
+      <button type="submit" class="boton">Guardar</button>
+      <a class="boton boton-claro" href="{{ url_for('usuarios.lista') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

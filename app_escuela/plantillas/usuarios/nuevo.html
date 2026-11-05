@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf %}
+{% block titulo %}Nuevo entrenador{% endblock %}
+{% block contenido %}
+<section class="tarjeta">
+  <h1>Nuevo usuario entrenador</h1>
+  <form method="post">
+    {{ csrf() }}
+    <div class="campo">
+      <label for="id_entrenador">¿Ya está registrado como entrenador?</label>
+      <select id="id_entrenador" name="id_entrenador" data-alternar="datos-nuevo">
+        <option value="">No, es un entrenador nuevo</option>
+        {% for e in existentes %}
+          <option value="{{ e.id_entrenador }}" {% if form.get('id_entrenador') == e.id_entrenador|string %}selected{% endif %}>
+            Sí: {{ e.nombres }} {{ e.apellidos or '' }} ({{ e.correo }})
+          </option>
+        {% endfor %}
+      </select>
+      {% if errores.get('id_entrenador') %}<p class="error-campo">{{ errores.id_entrenador }}</p>{% endif %}
+      <p class="ayuda">Si eliges uno existente, el usuario usa su mismo correo y queda enlazado a su ficha.</p>
+    </div>
+
+    <fieldset id="datos-nuevo" class="grupo-campos">
+      <legend>Datos del entrenador nuevo</legend>
+      <div class="dos-columnas">
+        {{ campo('nombres', 'Nombres', form.get('nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
+        {{ campo('apellidos', 'Apellidos', form.get('apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
+        {{ campo('correo', 'Correo (con este entra al sistema)', form.get('correo'), tipo='email', errores=errores, requerido=true, extra='maxlength="100"') }}
+        {{ campo('ci', 'CI', form.get('ci'), errores=errores, extra='maxlength="20"') }}
+        {{ campo('telefono', 'Teléfono', form.get('telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+        {{ campo('especialidad', 'Especialidad', form.get('especialidad'), errores=errores, extra='maxlength="100"') }}
+      </div>
+    </fieldset>
+
+    <div class="dos-columnas">
+      {{ campo('clave', 'Contraseña inicial (mínimo 8)', tipo='password', errores=errores, requerido=true, extra='minlength="8" autocomplete="new-password"') }}
+      {{ campo('repetir', 'Repite la contraseña', tipo='password', errores=errores, requerido=true, extra='minlength="8" autocomplete="new-password"') }}
+    </div>
+    <div class="botones">
+      <button type="submit" class="boton">Crear entrenador</button>
+      <a class="boton boton-claro" href="{{ url_for('usuarios.lista') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf, seleccion %}
+{% block titulo %}{{ 'Editar alumno' if id_alumno else 'Nuevo alumno' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('alumnos.ficha', id_alumno=id_alumno) if id_alumno else url_for('alumnos.lista') }}">← Volver</a></p>
+<section class="tarjeta">
+  <h1>{{ 'Editar alumno' if id_alumno else 'Nuevo alumno' }}</h1>
+  <form method="post">
+    {{ csrf() }}
+    <fieldset class="grupo-campos grupo-fijo">
+      <legend>Datos del alumno</legend>
+      <div class="dos-columnas">
+        {{ campo('codigo', 'Código (único)', form.get('codigo'), errores=errores, requerido=true, extra='maxlength="20" pattern="[A-Za-z0-9-]{2,20}" title="Letras, números y guiones, por ejemplo AL-051"') }}
+        {{ campo('nombres', 'Nombres', form.get('nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
+        {{ campo('apellidos', 'Apellidos', form.get('apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
+        {{ campo('fecha_nacimiento', 'Fecha de nacimiento', form.get('fecha_nacimiento'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy_iso ~ '"') }}
+        {{ seleccion('sexo', 'Sexo', sexos.items()|list, form.get('sexo'), errores, requerido=true, vacio='Elige') }}
+        {{ campo('direccion', 'Dirección', form.get('direccion'), errores=errores, extra='maxlength="200"') }}
+      </div>
+      {% if not id_alumno %}<p class="ayuda">El código se propone solo (siguiente libre de la serie AL-); puedes cambiarlo si no se repite.</p>{% endif %}
+    </fieldset>
+
+    <fieldset class="grupo-campos grupo-fijo">
+      <legend>Tutor</legend>
+      {% set opciones = [('nuevo', '+ Registrar un tutor nuevo')] + tutores_opciones %}
+      {{ seleccion('id_tutor', 'Tutor del alumno', opciones, form.get('id_tutor'), errores, requerido=true,
+                   vacio='Elige el tutor', extra='data-alternar="tutor-nuevo" data-mostrar-con="nuevo"') }}
+      <fieldset id="tutor-nuevo" class="grupo-campos">
+        <legend>Tutor nuevo</legend>
+        <div class="dos-columnas">
+          {{ campo('tutor_nombres', 'Nombres', form.get('tutor_nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
+          {{ campo('tutor_apellidos', 'Apellidos', form.get('tutor_apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
+          {{ campo('tutor_ci', 'CI', form.get('tutor_ci'), errores=errores, extra='maxlength="20"') }}
+          {{ campo('tutor_telefono', 'Teléfono', form.get('tutor_telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+          {{ campo('tutor_whatsapp', 'WhatsApp', form.get('tutor_whatsapp'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+          {{ campo('tutor_correo', 'Correo', form.get('tutor_correo'), tipo='email', errores=errores, extra='maxlength="100"') }}
+          {{ campo('tutor_direccion', 'Dirección', form.get('tutor_direccion'), errores=errores, extra='maxlength="200"') }}
+        </div>
+      </fieldset>
+    </fieldset>
+    {% if not id_alumno %}
+    <fieldset class="grupo-campos grupo-fijo" id="elegir-grupo">
+      <legend>Grupo donde entrenará</legend>
+      <div class="campo">
+        <label for="id_grupo">Grupo <span class="obligatorio" aria-hidden="true">*</span></label>
+        <select id="id_grupo" name="id_grupo" required {% if errores.id_grupo %}aria-invalid="true"{% endif %}>
+          <option value="">Elige el grupo</option>
+          {% for g in grupos %}
+            <option value="{{ g.id_grupo }}" data-min="{{ g.edad_minima }}" data-max="{{ g.edad_maxima }}"
+                    data-nombre="{{ g.nombre }}" data-lleno="{{ 1 if g.lleno else 0 }}"
+                    {% if g.lleno %}disabled{% endif %} {% if form.get('id_grupo') == g.id_grupo|string %}selected{% endif %}>
+              {{ g.nombre }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años){{ ' — LLENO' if g.lleno else ' — ' ~ g.libres ~ ' libres' }}
+            </option>
+          {% endfor %}
+          <option value="despues" {% if form.get('id_grupo') == 'despues' %}selected{% endif %}>Inscribir después</option>
+        </select>
+        {% if errores.id_grupo %}<p class="error-campo">{{ errores.id_grupo }}</p>{% endif %}
+        <p class="ayuda" id="ayuda-grupo">Al poner la fecha de nacimiento solo quedan los grupos de su edad.</p>
+      </div>
+    </fieldset>
+    {% endif %}
+    <div class="botones accion-fija">
+      <button type="submit" class="boton">{{ 'Guardar' if id_alumno else 'Guardar e inscribir' }}</button>
+      <a class="boton boton-claro" href="{{ url_for('alumnos.ficha', id_alumno=id_alumno) if id_alumno else url_for('alumnos.lista') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}{{ t.nombres }} {{ t.apellidos or '' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('alumnos.tutores') }}">← Tutores</a></p>
+<div class="barra-titulo">
+  <h1>{{ t.nombres }} {{ t.apellidos or '' }}</h1>
+  <div class="botones">
+    <a class="boton boton-claro" href="{{ url_for('alumnos.tutor_form', id_tutor=t.id_tutor) }}">Editar</a>
+    <a class="boton" href="{{ url_for('alumnos.alumno_form', id_tutor=t.id_tutor) }}">{{ icono('mas') }} Registrar un hijo</a>
+  </div>
+</div>
+<div class="rejilla-ficha">
+  <section class="tarjeta">
+    <h2>Contacto</h2>
+    <dl class="datos">
+      <dt>CI</dt><dd>{{ t.ci or '—' }}</dd>
+      <dt>Teléfono</dt><dd>{{ t.telefono or '—' }}</dd>
+      <dt>WhatsApp</dt><dd>{{ t.whatsapp or '—' }}</dd>
+      <dt>Correo</dt><dd>{{ t.correo or '—' }}</dd>
+      <dt>Dirección</dt><dd>{{ t.direccion or '—' }}</dd>
+    </dl>
+  </section>
+  <section class="tarjeta">
+    <h2>Alumnos a su cargo ({{ t.alumnos|length }})</h2>
+    {% if t.alumnos %}
+      <ul class="lista-simple">
+      {% for a in t.alumnos %}
+        <li><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">{{ a.nombres }} {{ a.apellidos or '' }}</a>
+            <span class="ayuda">{{ a.codigo }}{{ ' · desactivado' if a.estado != 'ACTIVO' }}</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}<p class="vacio">Todavía no tiene alumnos registrados.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

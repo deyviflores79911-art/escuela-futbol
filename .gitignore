@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Clave que firma las sesiones de la app (nunca se sube)
+app_escuela/.clave_secreta
+
+# Entornos y editores
+.venv/
+venv/
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_campos.html" import pestanas %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Alumnos{% endblock %}
+{% block contenido %}
+{{ pestanas([('alumnos.lista', 'Alumnos'), ('alumnos.tutores', 'Tutores')]) }}
+<div class="barra-titulo">
+  <div>
+    <h1>Alumnos</h1>
+    <p class="subtitulo">{{ total.activos or 0 }} activos de {{ total.total }} registrados.</p>
+  </div>
+  <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Nuevo alumno</a>
+</div>
+
+<form class="tarjeta filtros filtros-alumnos" method="get" role="search">
+  <div class="campo">
+    <label for="q">Buscar</label>
+    <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" autofocus
+           placeholder="Nombre, apellido, código o tutor (nombre o CI)">
+  </div>
+  <div class="campo">
+    <label for="estado">Estado</label>
+    <select id="estado" name="estado">
+      <option value="">Todos</option>
+      <option value="ACTIVO" {% if estado == 'ACTIVO' %}selected{% endif %}>Activos</option>
+      <option value="INACTIVO" {% if estado == 'INACTIVO' %}selected{% endif %}>Desactivados</option>
+    </select>
+  </div>
+  <div class="botones">
+    <button class="boton">Buscar</button>
+    {% if q or estado %}<a class="boton boton-claro" href="{{ url_for('alumnos.lista') }}">Quitar filtros</a>{% endif %}
+  </div>
+</form>
+
+{% if alumnos %}
+<p class="ayuda">{{ alumnos|length }} resultado{{ 's' if alumnos|length != 1 }}{% if alumnos|length >= maximo %} (se muestran los primeros {{ maximo }}; afina la búsqueda){% endif %}.</p>
+<div class="tabla-envoltura"><table class="tabla">
+  <thead><tr><th>Alumno</th><th>Edad</th><th>Tutor</th><th>Grupo</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for a in alumnos %}
+    <tr>
+      <td><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong></a><br><span class="ayuda">{{ a.codigo }}</span></td>
+      <td>{{ a.edad if a.edad is not none else '—' }}</td>
+      <td>{{ a.tutor or '—' }}<br><span class="ayuda">{{ a.tutor_whatsapp or a.tutor_telefono or '' }}</span></td>
+      <td>{{ a.grupos or 'Sin grupo' }}</td>
+      <td>{% if a.estado == 'ACTIVO' %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% elif q or estado %}
+<div class="tarjeta vacio">
+  <p>No se encontró ningún alumno con «{{ q }}».</p>
+  <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Registrar un alumno nuevo</a>
+</div>
+{% else %}
+<div class="tarjeta vacio">
+  <p>Todavía no hay alumnos registrados.</p>
+  <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Registrar el primer alumno</a>
+</div>
+{% endif %}
+{% endblock %}

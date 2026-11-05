@@ -1,0 +1,269 @@
+{
+  "generado": "14/10/2026 09:26",
+  "fuente": "Data Warehouse DW_EscuelasDeportivas (localhost\\MSSQLSERVER01)",
+  "pagos_simulados": 562,
+  "pagos_entregados": 300,
+  "pagos": 862,
+  "alumnos": 107,
+  "atrasados": 299,
+  "tasa_atraso": 0.3468677494199536,
+  "filas_modelo": 755,
+  "clases": {
+    "a_tiempo": 492,
+    "atrasado": 263,
+    "proporcion": 1.870722433460076
+  },
+  "tasa_por_metodo": {
+    "Efectivo": 0.5188679245283019,
+    "QR": 0.2574626865671642,
+    "Tarjeta": 0.4233128834355828,
+    "Transferencia": 0.2328767123287671
+  },
+  "tasa_por_categoria": {
+    "Sub-8": 0.43548387096774194,
+    "Sub-10": 0.4166666666666667,
+    "Sub-12": 0.24497991967871485,
+    "Sub-14": 0.4550898203592814,
+    "Sub-16": 0.25903614457831325
+  },
+  "metodo_mas_usado": "QR",
+  "monto_igual_categoria": false,
+  "correlacion_monto_dias": -0.12366034274533663,
+  "exactitud_base": 0.6516556291390728,
+  "comparacion": [
+    {
+      "modelo": "Árbol de decisión",
+      "balanceo": false,
+      "exactitud": 0.6578863305969096,
+      "exactitud_desv": 0.01930362174083171,
+      "precision": 0.5265597927164636,
+      "precision_desv": 0.0534832579185925,
+      "sensibilidad": 0.35294181290407706,
+      "sensibilidad_desv": 0.1447973920488951,
+      "f1": 0.399075025756608,
+      "f1_desv": 0.10933721851968013,
+      "auc": 0.6539452746832282,
+      "auc_desv": 0.027290464781457198
+    },
+    {
+      "modelo": "Random Forest",
+      "balanceo": false,
+      "exactitud": 0.6889096731827803,
+      "exactitud_desv": 0.024243202267778784,
+      "precision": 0.6018252018252018,
+      "precision_desv": 0.0629080333791589,
+      "sensibilidad": 0.3315300171526586,
+      "sensibilidad_desv": 0.06814362709152857,
+      "f1": 0.42269348035197635,
+      "f1_desv": 0.06098021021093323,
+      "auc": 0.6816910741871679,
+      "auc_desv": 0.028078330366567306
+    },
+    {
+      "modelo": "Regresión logística",
+      "balanceo": false,
+      "exactitud": 0.6947508288136242,
+      "exactitud_desv": 0.04177513904924553,
+      "precision": 0.5977735498176096,
+      "precision_desv": 0.08973633864862274,
+      "sensibilidad": 0.3912526718564454,
+      "sensibilidad_desv": 0.07672491517670632,
+      "f1": 0.46962871887826535,
+      "f1_desv": 0.07791450511990876,
+      "auc": 0.6998635705196186,
+      "auc_desv": 0.028412151986706043
+    },
+    {
+      "modelo": "Árbol de decisión",
+      "balanceo": true,
+      "exactitud": 0.6276207588091743,
+      "exactitud_desv": 0.013130181102507165,
+      "precision": 0.47278914813160783,
+      "precision_desv": 0.011466390843886976,
+      "sensibilidad": 0.6007333421295685,
+      "sensibilidad_desv": 0.15791478431142258,
+      "f1": 0.5180164947017962,
+      "f1_desv": 0.0776234070489694,
+      "auc": 0.6674551741112176,
+      "auc_desv": 0.03006404760292472
+    },
+    {
+      "modelo": "Random Forest",
+      "balanceo": true,
+      "exactitud": 0.6330490127831986,
+      "exactitud_desv": 0.03222365728384633,
+      "precision": 0.4811564060268439,
+      "precision_desv": 0.04010647723772284,
+      "sensibilidad": 0.5929587016756829,
+      "sensibilidad_desv": 0.02568227337770277,
+      "f1": 0.5301856612533306,
+      "f1_desv": 0.027898362245861928,
+      "auc": 0.681583460588534,
+      "auc_desv": 0.030691498282944766
+    },
+    {
+      "modelo": "Regresión logística",
+      "balanceo": true,
+      "exactitud": 0.6688083249501198,
+      "exactitud_desv": 0.010997817626827357,
+      "precision": 0.5213160791849316,
+      "precision_desv": 0.017007453620426192,
+      "sensibilidad": 0.6233503100672911,
+      "sensibilidad_desv": 0.028701355856415808,
+      "f1": 0.567137540001929,
+      "f1_desv": 0.012015825085664988,
+      "auc": 0.7002312382713594,
+      "auc_desv": 0.028071048383157726
+    }
+  ],
+  "mejor_modelo": "Regresión logística",
+  "mejor_balanceo": true,
+  "prueba": {
+    "filas": 192,
+    "alumnos": 28,
+    "exactitud": 0.6614583333333334,
+    "precision": 0.5172413793103449,
+    "sensibilidad": 0.6617647058823529,
+    "f1": 0.5806451612903226,
+    "auc": 0.7424098671726755,
+    "matriz": [
+      [
+        82,
+        42
+      ],
+      [
+        23,
+        45
+      ]
+    ],
+    "exactitud_base": 0.6458333333333334
+  },
+  "auc_prueba": {
+    "Árbol de decisión": 0.7013757115749526,
+    "Random Forest": 0.7535578747628084,
+    "Regresión logística": 0.7424098671726755
+  },
+  "importancia": {
+    "Monto mensualidad": 0.009966793168880472,
+    "Método de pago": 0.04156309297912714,
+    "Categoría": 0.04324715370018978,
+    "% atrasos previos": 0.09701257115749529
+  },
+  "variable_top": "% atrasos previos",
+  "siluetas": {
+    "2": 0.7314999085271868,
+    "3": 0.6379836752149517,
+    "4": 0.6929421209529019,
+    "5": 0.6870524094554191,
+    "6": 0.733131228862013
+  },
+  "k": 3,
+  "mejor_k": 6,
+  "grupos": {
+    "Puntuales": {
+      "alumnos": 34,
+      "pct_atraso": 0.10864527629233511,
+      "dias_promedio": 0.5617201426024955
+    },
+    "Ocasionales": {
+      "alumnos": 58,
+      "pct_atraso": 0.4273399014778325,
+      "dias_promedio": 1.223111658456486
+    },
+    "Morosos": {
+      "alumnos": 15,
+      "pct_atraso": 0.7941269841269841,
+      "dias_promedio": 11.613174603174603
+    }
+  },
+  "conclusiones": [
+    "El 35% de los pagos llegó atrasado (299 de 862).",
+    "El método de pago sí marca diferencia: Efectivo se atrasa en el 52% de los casos y Transferencia solo en el 23%.",
+    "La categoría influye: Sub-14 se atrasa 21 puntos más que Sub-12.",
+    "La correlación entre monto y días de atraso es -0.12.",
+    "La variable que más ayuda a predecir es '% atrasos previos'.",
+    "El mejor modelo fue Regresión logística con balanceo: en validación cruzada detecta el 62% de los atrasos con un AUC de 0.70, frente a una exactitud de 65% si se adivina siempre 'a tiempo'.",
+    "Con el balanceo de clases, la detección de atrasos del árbol pasa de 35% a 60% y la precisión de 53% a 47%.",
+    "K-Means identificó 15 alumnos con comportamiento moroso: son los primeros a quienes conviene recordar el pago."
+  ],
+  "graficos": [
+    {
+      "archivo": "01_pagos_por_metodo.png",
+      "titulo": "Pagos por método de pago",
+      "explicacion": "Cuántos pagos se hicieron con cada método y cuántos llegaron tarde (naranja). QR es el más usado; Efectivo es el que más se atrasa (52%) y Transferencia el que menos (23%).",
+      "seccion": "exploracion"
+    },
+    {
+      "archivo": "02_boxplot_dias_categoria.png",
+      "titulo": "Días de atraso por categoría",
+      "explicacion": "Cada punto es un pago; la caja muestra dónde está la mitad de los pagos y la línea azul es la mediana. Por debajo de 0 el pago llegó antes del vencimiento; por encima de 15 es un atraso crítico. Las medianas por categoría van de 0 a 0 días.",
+      "seccion": "exploracion"
+    },
+    {
+      "archivo": "03_scatter_monto_dias.png",
+      "titulo": "Monto vs días de atraso",
+      "explicacion": "Cada punto es un pago. Sirve para ver si las mensualidades más caras se pagan más tarde. La correlación es -0.12: casi no hay relación.",
+      "seccion": "exploracion"
+    },
+    {
+      "archivo": "04_pct_atraso_categoria.png",
+      "titulo": "% de atraso por categoría",
+      "explicacion": "Qué porcentaje de los pagos de cada categoría llegó tarde, comparado con el promedio (35%). Sub-14 es la que más se atrasa (46%) y Sub-12 la que menos (24%).",
+      "seccion": "exploracion"
+    },
+    {
+      "archivo": "05_heatmap_categoria_metodo.png",
+      "titulo": "Categoría vs método de pago",
+      "explicacion": "Cada cuadro cruza una categoría con un método de pago: cuanto más oscuro, mayor el porcentaje de atrasos. Permite ver si un método se atrasa en todas las categorías o solo en algunas. Los cuadros con n pequeño (pocos pagos) son menos confiables.",
+      "seccion": "exploracion"
+    },
+    {
+      "archivo": "06_balance_clases.png",
+      "titulo": "Balance de clases",
+      "explicacion": "Hay 1.9 pagos a tiempo por cada pago atrasado. Cuando una clase es mayoría, el modelo tiende a favorecerla y deja pasar atrasos. Por eso se prueba una corrección (class_weight='balanced').",
+      "seccion": "modelo"
+    },
+    {
+      "archivo": "07_balanceo_antes_despues.png",
+      "titulo": "Antes y después del balanceo",
+      "explicacion": "Compara cuántos atrasos detecta cada modelo sin y con class_weight='balanced'. En el árbol, la sensibilidad pasa de 35% a 60% y la precisión de 53% a 47%: detecta más atrasos a cambio de algunas falsas alarmas más.",
+      "seccion": "modelo"
+    },
+    {
+      "archivo": "08_comparacion_modelos.png",
+      "titulo": "Comparación de modelos",
+      "explicacion": "Los tres modelos evaluados con la misma validación cruzada. El de mejor F1 es Regresión logística (F1 0.57, AUC 0.70). La línea punteada es la exactitud de adivinar siempre 'a tiempo' (65%): un modelo útil tiene que superarla.",
+      "seccion": "modelo"
+    },
+    {
+      "archivo": "09_matriz_confusion.png",
+      "titulo": "Matriz de confusión",
+      "explicacion": "Compara lo que predijo el modelo con lo que pasó, en 28 alumnos que no vio al aprender. Acertó 127 de 192 pagos; detectó 45 de 68 atrasos; dio 42 falsas alarmas y dejó pasar 23 atrasos.",
+      "seccion": "evaluacion"
+    },
+    {
+      "archivo": "10_curva_roc.png",
+      "titulo": "Curva ROC",
+      "explicacion": "Muestra el equilibrio entre detectar atrasos y dar falsas alarmas al mover el umbral de decisión. El AUC resume la curva: 0.5 es adivinar al azar y 1.0 es perfecto. Árbol de decisión: 0.70, Random Forest: 0.75, Regresión logística: 0.74.",
+      "seccion": "evaluacion"
+    },
+    {
+      "archivo": "11_importancia_variables.png",
+      "titulo": "Importancia de variables",
+      "explicacion": "Qué tanto depende el modelo de cada variable: se desordena una variable y se mide cuánto empeora. La más importante es '% atrasos previos'. Una barra cerca de 0 significa que esa variable casi no ayuda.",
+      "seccion": "evaluacion"
+    },
+    {
+      "archivo": "12_arbol_decision.png",
+      "titulo": "Árbol de decisión",
+      "explicacion": "Las reglas que aprendió el árbol, como una cadena de preguntas. Es el modelo más fácil de explicar: cualquier persona puede seguir las flechas y llegar a la predicción.",
+      "seccion": "evaluacion"
+    },
+    {
+      "archivo": "13_clustering_kmeans.png",
+      "titulo": "Grupos de alumnos (K-Means)",
+      "explicacion": "K-Means separó a los alumnos en 3 grupos según cuánto y cuánto tiempo se atrasan: Puntuales: 34 alumnos (11% de atrasos), Ocasionales: 58 alumnos (43% de atrasos), Morosos: 15 alumnos (79% de atrasos). Según la silueta, el número de grupos más separado sería k = 6; se eligió k = 3 porque es fácil de usar para la escuela.",
+      "seccion": "clustering"
+    }
+  ]
+}

@@ -1,0 +1,366 @@
+=====================================================================
+  DATA MINING - ESCUELA DE FUTBOL
+  Pruebas de que el dashboard es real y justificacion de Python
+  Proyecto: Sistema_EscuelasDeportivas -> SSIS -> DW_EscuelasDeportivas
+  Fecha: 05/10/2026 (numeros actualizados al 14/10/2026 09:26)
+=====================================================================
+
+
+#####################################################################
+  PARTE A: ¿LOS GRAFICOS SON REALES?
+#####################################################################
+
+En resumen: SI. Ningun numero del dashboard esta escrito a mano:
+todos salen de calculos sobre los datos, y se comprobo por tres caminos
+distintos. Hay un aviso importante antes de presentar (punto 7).
+
+
+---------------------------------------------------------------------
+1. DONDE SE CONECTA Y QUE LEE
+---------------------------------------------------------------------
+Archivo: mineria_pagos.py
+
+Lineas 69-70 (servidor y base):
+
+    SERVIDOR = r"localhost\MSSQLSERVER01"
+    DATA_WAREHOUSE = "DW_EscuelasDeportivas"
+
+Lineas 147-176 (consulta y conexion):
+
+    SELECT H.id_alumno, C.nombre_categoria AS categoria,
+           MP.nombre_metodo_pago AS metodo_pago,
+           E.nombre_estado_pago AS estado_pago, T.fecha, H.numero_recibo,
+           H.monto_mensualidad, H.monto_pagado, H.saldo_pendiente,
+           H.dias_atraso, H.pago_atrasado
+    FROM H_PAGOS H
+    INNER JOIN D_CATEGORIA C    ON H.id_categoria   = C.id_categoria
+    INNER JOIN D_METODO_PAGO MP ON H.id_metodo_pago = MP.id_metodo_pago
+    INNER JOIN D_ESTADO_PAGO E  ON H.id_estado_pago = E.id_estado_pago
+    INNER JOIN D_TIEMPO T       ON H.id_tiempo      = T.id_tiempo
+
+    conexion = pyodbc.connect("DRIVER={ODBC Driver 17 for SQL Server};"
+        f"SERVER={SERVIDOR};DATABASE={DATA_WAREHOUSE};Trusted_Connection=yes;")
+
+Si no logra conectarse, usa el CSV datos\h_pagos_ejemplo.csv, y el
+dashboard lo dice en el aviso de arriba ("Fuente leida: ...").
+
+
+---------------------------------------------------------------------
+2. ¿NUMEROS ESCRITOS A MANO?
+---------------------------------------------------------------------
+No. Se buscaron en el script los numeros del dashboard actual (862,
+299, 35 %, 62 %, 0.69) y los de versiones anteriores (802, 0.68, 300,
+0.88, 12): ninguno aparece. El unico "300" del codigo es la cantidad de arboles
+del Random Forest.
+
+Las tarjetas del dashboard se escriben con variables (lineas 758-762):
+
+    {len(pagos)}                          -> cantidad de pagos
+    {pct(tasa_general)}                   -> % de atrasados
+    {pct(mejor['sensibilidad'])}          -> % de atrasos detectados
+    {mejor['auc']:.2f}                    -> AUC
+    {resumen_grupos.loc['Morosos', ...]}  -> alumnos en el grupo "Morosos"
+
+COMO REPETIRLO: abrir mineria_pagos.py en VS Code, Ctrl+F, buscar
+"0.69" o "862": no aparecen.
+
+Numeros del dashboard actual: 862 pagos, 35 % atrasados, 62 % de
+atrasos detectados, AUC 0.69 y 15 alumnos en el grupo "Morosos".
+(Con 802 pagos, el 05/10, eran 33 % / 63 % / 0.68 / 11; los numeros
+300 / 0.88 / 12 eran de una version anterior.)
+
+
+---------------------------------------------------------------------
+3. COMPROBACION DIRECTA EN SQL, SIN PYTHON
+---------------------------------------------------------------------
+Atrasado = fecha_pago posterior a fecha_vencimiento (misma regla del SSIS).
+Total:
+
+    USE Sistema_EscuelasDeportivas;
+    SELECT COUNT(*) AS pagos,
+           SUM(CASE WHEN P.fecha_pago > M.fecha_vencimiento
+                    THEN 1 ELSE 0 END) AS atrasados
+    FROM PAGO P
+    JOIN MENSUALIDAD M ON M.id_mensualidad = P.id_mensualidad;
+
+Por metodo: agregar JOIN METODO_PAGO y GROUP BY MP.nombre.
+Por categoria: agregar JOIN a INSCRIPCION, GRUPO y CATEGORIA y
+GROUP BY C.nombre.
+
+Resultado de la comparacion:
+
+    Indicador                  SQL                  Script (dashboard)
+    -------------------------  -------------------  -------------------
+    Pagos / atrasados          862 / 299 (34,7 %)   862 / 299 (34,7 %)
+    Efectivo / Tarjeta         51,9 % / 42,3 %      51,9 % / 42,3 %
+    QR / Transferencia         25,7 % / 23,3 %      25,7 % / 23,3 %
+    Sub-8 / Sub-10 / Sub-12    43,5 / 41,7 / 24,5   43,5 / 41,7 / 24,5
+    Sub-14 / Sub-16            45,5 / 25,9          45,5 / 25,9
+
+    -> Todos coinciden exactamente (consultas repetidas el 14/10/2026).
+
+    Nota: los numeros por categoria cambiaron el 13/10/2026 porque se
+    corrigieron 45 alumnos que estaban en una categoria que no era de
+    su edad. El total (862 pagos, 299 atrasados) y los numeros por
+    metodo de pago no cambiaron.
+
+
+---------------------------------------------------------------------
+4. PRUEBA DE QUE REACCIONA A LOS DATOS
+---------------------------------------------------------------------
+Se hizo en una carpeta aparte, sin tocar la base:
+C:\Users\msi\Desktop\prueba_dashboard\
+
+En una COPIA del CSV se cambiaron 80 pagos con QR de "a tiempo" a
+"atrasado", y se regenero un dashboard de prueba. (El CSV es una copia
+de H_PAGOS del 05/10, con 802 pagos; esta tabla compara el CSV antes y
+despues del cambio.)
+
+    Indicador                CSV antes (802)       Dashboard de prueba
+    -----------------------  --------------------  --------------------
+    % pagos atrasados        33,2 %                43,1 %
+    % atraso con QR          25,7 %                56,8 %
+    % atraso con Efectivo    50,8 %                50,8 % (no se toco)
+    Mejor modelo             Regresion logistica   Random Forest
+    AUC                      0,68                  0,74
+    Conclusion escrita       "Efectivo se atrasa   "QR se atrasa en
+                             en el 51 %..."        el 57 %..."
+
+Lo que no se toco no cambio (Efectivo, grupo "Morosos"); lo que se
+toco, si. El dashboard real no se modifico.
+
+OJO al repetirlo hoy: comparar.py pone en la columna "real" el dashboard
+actual, que ya tiene 862 pagos (35 %; Efectivo 51,9 %). Por eso ahi
+Efectivo parece cambiar aunque la prueba no lo toca: es otra cantidad de
+pagos, no un efecto de la prueba. La comparacion limpia es la que
+imprime modificar_copia.py (antes y despues sobre la misma copia).
+
+COMO REPETIRLO frente a la ingeniera (en una terminal):
+
+    cd C:\Users\msi\Desktop\prueba_dashboard
+    copy ..\deportivva\datos\h_pagos_ejemplo.csv datos\
+    python modificar_copia.py
+    python mineria_pagos.py --csv --no-abrir
+    python comparar.py
+
+(El "copy" es necesario porque la copia del CSV ya quedo modificada por
+la prueba. El dashboard de prueba queda en
+prueba_dashboard\resultados\dashboard.html.)
+
+
+---------------------------------------------------------------------
+5. QUE CODIGO GENERA CADA GRAFICO
+---------------------------------------------------------------------
+    Grafico                              Linea   Libreria y funcion
+    -----------------------------------  ------  ------------------------------
+    1. Pagos por metodo                  207     matplotlib ax.bar (barras apiladas)
+    2. Dias de atraso por categoria      230     seaborn boxplot + stripplot
+    3. Monto vs dias de atraso           258     matplotlib ax.scatter
+    4. % de atraso por categoria         280     matplotlib ax.bar
+    5. Mapa de calor categoria x metodo  299     seaborn heatmap
+    6-8. Balance, balanceo, comparacion  346+    matplotlib + scikit-learn cross_validate
+    9. Matriz de confusion               478     scikit-learn confusion_matrix + seaborn
+    10. Curva ROC                        508     scikit-learn roc_curve + matplotlib
+    11. Importancia de variables         528     scikit-learn permutation_importance
+    12. Arbol de decision                561     scikit-learn plot_tree
+    13. Grupos K-Means                   607     scikit-learn KMeans + silhouette_score
+
+Ademas, al final del script (lineas 808 y 861) se guardan dos archivos
+para la app web: riesgo_alumnos.json (riesgo de atraso por alumno) y
+datos_graficos.json (los datos con que la app dibuja estos graficos).
+La app los muestra con graficos interactivos; no calcula nada por su cuenta.
+
+OJO: no hay histograma. El grafico 1 es un grafico de barras que
+cuenta pagos por metodo. Si preguntan, decir "grafico de barras de
+conteo".
+
+
+---------------------------------------------------------------------
+6. QUE ES REAL Y QUE NO
+---------------------------------------------------------------------
+La base hoy tiene:
+  - 300 pagos REC-: datos de ejemplo de la base entregada, sin modificar.
+    (El cambio de fechas y metodos que se habia hecho antes se deshizo
+    el 05/10.)
+  - 502 pagos SIM-: SIMULADOS, agregados con generar_pagos_prueba.py,
+    con patrones programados a proposito.
+  - 60 pagos PRB-: SIMULADOS, agregados con pagos_prueba_60.sql (familias
+    morosas que pagan en efectivo, para ver que el dashboard reacciona).
+  Total: 862 pagos; 562 simulados (SIM- y PRB-). El dashboard y el Word
+  los cuentan asi desde el 12/10.
+
+ES REAL:
+  - La conexion a SQL Server y la lectura de H_PAGOS.
+  - Los calculos (coinciden con SQL, punto 3).
+  - El entrenamiento y la evaluacion del modelo.
+  - Que se puede repetir con el mismo resultado (semilla 42).
+
+NO ES REAL:
+  - El comportamiento de los tutores: ningun pago es de una escuela
+    verdadera.
+  - Los patrones de los pagos SIM- y PRB- (efectivo mas atrasado, familias
+    morosas) fueron programados, asi que el modelo "descubre" lo que se
+    puso en los datos.
+  - Los 300 REC- tampoco son reales: son datos de ejemplo con un patron
+    repetitivo.
+
+Frase para decir: "Lo real es el proceso: lee el Data Warehouse,
+calcula, entrena y evalua. Los datos son de ejemplo y simulados, asi
+que los resultados no describen una escuela real."
+
+
+---------------------------------------------------------------------
+7. LO QUE HAY QUE SABER, SIN SUAVIZAR
+---------------------------------------------------------------------
+* EL DASHBOARD ACTUAL SI VIENE DEL DATA WAREHOUSE (actualizado 12/10):
+  H_PAGOS tiene los mismos 862 pagos que la base y el aviso dice "Fuente
+  leida: Data Warehouse DW_EscuelasDeportivas". Antes de presentar,
+  ejecuta el SSIS para que la hora del dashboard sea la de la clase.
+  Si algun dia el aviso dice "CSV de ejemplo", Python no pudo leer el
+  Data Warehouse (ver la guia de la demostracion).
+
+* LOS PUNTOS DE ALGUNOS GRAFICOS ESTAN CORRIDOS A PROPOSITO. En el
+  scatter (grafico 3), el boxplot (grafico 2) y K-Means (grafico 13) los
+  puntos se desplazan un poco al azar para que no queden encimados (se
+  llama "jitter"). La posicion exacta de cada punto no es el valor
+  exacto; los calculos no se afectan.
+
+* HAY DECISIONES FIJAS, NO CALCULADAS: semilla 42; arbol con
+  profundidad 3; 300 arboles en el Random Forest; validacion de 5 partes
+  con 25 % de alumnos para el examen; y K = 3 grupos impuesto a mano
+  (el grafico de silueta muestra si otra cantidad separaria mejor).
+
+* LOS NOMBRES DE LOS GRUPOS SE PONEN A MANO: "Puntuales", "Ocasionales"
+  y "Morosos" se asignan ordenando los grupos por su % de atraso.
+  "Morosos" es un nombre relativo, no la regla del practico (2 o mas
+  atrasos).
+
+* LAS FRASES DE LAS CONCLUSIONES USAN UMBRALES ELEGIDOS A MANO: por
+  ejemplo, la diferencia entre "influye" e "influye poco" esta en 15
+  puntos. Los numeros de cada frase si son calculados.
+
+* LA TABLA DE HERRAMIENTAS DEL WORD (Orange, R, Weka...) es texto
+  escrito, no un calculo.
+
+* EL MODELO ES MODESTO: AUC 0,70 en validacion cruzada (0,74 con los
+  alumnos nuevos). Su exactitud (67 %) apenas supera la de adivinar
+  siempre "a tiempo" (65 %); lo que logra es detectar el 62 % de los
+  atrasos. La diferencia entre categorias (Sub-14 contra Sub-12) salio
+  de los datos: no se programo.
+
+* EL PCA PIERDE INFORMACION: resume 9 variables en 2 ejes que guardan
+  el 54 % de la informacion. Sirve para VER los grupos, no reemplaza a
+  K-Means.
+
+
+#####################################################################
+  PARTE B: ¿POR QUE PYTHON Y NO ORANGE?
+#####################################################################
+
+---------------------------------------------------------------------
+LA IDEA
+---------------------------------------------------------------------
+No se trataba de hacer un grafico bonito, sino de agregar la etapa de
+Data Mining a un proyecto que ya existia: base transaccional -> SSIS ->
+Data Warehouse. Necesitabamos una herramienta que leyera directo de ese
+Data Warehouse, hiciera todo el analisis en un proceso que se pueda
+repetir y se pudiera conectar al final del ETL. Ademas, la ingeniera
+pidio explicitamente Python.
+
+
+---------------------------------------------------------------------
+COMPARACION HONESTA
+---------------------------------------------------------------------
+ORANGE
+  Bien:  Gratis, muy visual, se aprende rapido y es excelente para
+         exponer: se ven los bloques y el flujo. Por dentro usa Python y
+         scikit-learn. Tambien puede leer de SQL Server con su bloque
+         "SQL Table".
+  Aqui:  Esta pensado para trabajar abriendo su ventana, no para correr
+         solo al final de un paquete SSIS. Los graficos se personalizan
+         menos.
+
+R
+  Bien:  Gratis, muy fuerte en estadistica, se conecta a SQL Server y
+         tambien se puede automatizar.
+  Aqui:  Tecnicamente tambien servia. Se eligio Python porque es mas
+         usado en la industria y lo pidio la ingeniera.
+
+WEKA
+  Bien:  Gratis, clasico en universidades, muchos algoritmos listos.
+  Aqui:  Interfaz antigua, graficos basicos, mas dificil de integrar con
+         nuestro flujo.
+
+RAPIDMINER (hoy Altair AI Studio)
+  Bien:  Visual y potente, con flujos profesionales.
+  Aqui:  Es comercial: sus licencias gratuitas o educativas tienen
+         condiciones.
+
+POWER BI
+  Bien:  Excelente para dashboards y se conecta a SQL Server.
+  Aqui:  No esta hecho para entrenar y evaluar modelos (validacion
+         cruzada, curva ROC, balanceo de clases).
+
+SSAS DATA MINING
+  Bien:  Venia integrado con SQL Server.
+  Aqui:  Segun la documentacion de Microsoft, fue declarado obsoleto en
+         SQL Server 2017 y retirado desde SQL Server 2022; el servidor
+         del proyecto es 2025.
+
+
+---------------------------------------------------------------------
+POR QUE PYTHON ENCAJA CON ESTE PROYECTO (comprobado en el equipo)
+---------------------------------------------------------------------
+- Se conecta directo al SQL Server con pyodbc y lee H_PAGOS con una
+  consulta SQL normal.
+- Se automatiza: el script ya esta agregado al final del SSIS como
+  ACTUALIZAR_DASHBOARD, y ya se comprobo dentro de Visual Studio (el SSIS
+  lo ejecuto el 05/10/2026 a las 00:37).
+- Es reproducible: con la semilla 42, el mismo dato da el mismo
+  resultado, y cualquiera puede leer cada paso en el codigo.
+- Es gratuito: Python, pandas, scikit-learn, matplotlib y seaborn son de
+  codigo abierto.
+- Es estandar en la industria: es de lo mas usado para Data Science.
+
+
+---------------------------------------------------------------------
+QUE GANO EL PROYECTO
+---------------------------------------------------------------------
+- Un solo comando genera 13 graficos, el dashboard y el Word, siempre
+  coherentes entre si.
+- Las conclusiones se escriben solas con los numeros reales: si cambian
+  los datos, cambian las frases (punto 4 de la Parte A).
+- Validacion mas rigurosa: separar los alumnos del examen, comparar 3
+  modelos y probar el balanceo. En Orange tambien se puede, pero aqui
+  todo queda escrito y se puede revisar.
+- Se puede auditar: cada numero tiene una linea de codigo detras y se
+  puede comprobar en SQL (punto 3 de la Parte A).
+
+
+---------------------------------------------------------------------
+LIMITACIONES (para no quedar mal si preguntan)
+---------------------------------------------------------------------
+- Requiere programar. Orange se explica mas facil arrastrando bloques
+  frente a la clase.
+- Es menos visual mientras se trabaja: el flujo esta en el codigo, no en
+  un diagrama.
+- Depende del equipo: las librerias estan instaladas para el usuario de
+  Windows; si el SSIS corriera en otro servidor habria que instalarlas
+  alli.
+- Mas control significa mas decisiones propias (semilla, profundidad del
+  arbol, K = 3), y hay que saber explicarlas.
+
+
+---------------------------------------------------------------------
+TRES FRASES PARA MEMORIZAR
+---------------------------------------------------------------------
+1. "Elegi Python porque necesitaba conectar el Data Mining a mi Data
+   Warehouse y a mi SSIS, no solo hacer graficos: lee H_PAGOS directo y
+   se actualiza solo al final del ETL."
+
+2. "Orange es mejor para aprender y exponer visualmente, pero Python deja
+   todo el proceso escrito, se puede repetir y se puede automatizar."
+
+3. "Todos mis numeros se calculan desde los datos y los puedo comprobar
+   en SQL; lo real es el proceso, porque los datos son de ejemplo y
+   simulados."

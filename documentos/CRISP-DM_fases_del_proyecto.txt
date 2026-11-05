@@ -1,0 +1,644 @@
+=====================================================================
+  CRISP-DM: LAS 6 FASES, EXPLICADAS Y APLICADAS AL PROYECTO
+  Data Mining - Escuela de futbol
+  Sistema_EscuelasDeportivas -> SSIS -> DW_EscuelasDeportivas -> Python
+  Numeros del analisis del 14/10/2026 09:26 (862 pagos, 107 alumnos)
+=====================================================================
+
+COMO LEER ESTE DOCUMENTO
+  Para cada fase hay cuatro partes:
+    a) Que es la fase (la teoria de CRISP-DM).
+    b) Tareas que pide CRISP-DM en esa fase.
+    c) Como se hizo en ESTE proyecto (con los numeros reales y la linea
+       de mineria_pagos.py donde esta).
+    d) Que se entrega al terminar la fase.
+  Al final hay un resumen en tabla y preguntas que podria hacer la
+  ingeniera, con su respuesta.
+
+  Los numeros salen de resultados\metricas.json,
+  resultados\riesgo_alumnos.json y resultados\patrones.json. Si se
+  vuelve a ejecutar el SSIS con otros datos, los numeros cambian (el
+  codigo no tiene numeros escritos a mano).
+
+  CAMBIO IMPORTANTE (13/10/2026): 45 alumnos estaban inscritos en una
+  categoria que no era de su edad (por ejemplo, ninos de 14 anos en
+  Sub-8). Se corrigio: cada alumno paso al grupo de su edad y la app ya
+  no permite inscribir fuera de rango. Por eso, desde el analisis del
+  14/10 cambian los numeros POR CATEGORIA y los de los modelos (el
+  total de pagos y de atrasos es el mismo).
+
+
+#####################################################################
+  QUE ES CRISP-DM
+#####################################################################
+
+CRISP-DM significa "Cross Industry Standard Process for Data Mining"
+(proceso estandar para la mineria de datos, valido para cualquier
+industria). Se publico en el ano 2000 y es la metodologia mas usada
+para proyectos de Data Mining.
+
+No dice QUE algoritmo usar: dice EN QUE ORDEN trabajar y QUE preguntas
+responder en cada paso, para que el proyecto resuelva un problema real
+y no solo produzca graficos.
+
+Tiene 6 fases. No es una linea recta: es un CICLO. Se puede volver a
+una fase anterior cuando se aprende algo nuevo (por ejemplo, al evaluar
+un modelo se descubre que faltan datos y se vuelve a preparar).
+
+         +-----------------------------+
+         | 1. Comprension del negocio  |<------------------+
+         +-----------------------------+                   |
+                ^          |                               |
+                |          v                               |
+         +-----------------------------+                   |
+         | 2. Comprension de los datos |                   |
+         +-----------------------------+                   |
+                           |                               |
+                           v                               |
+         +-----------------------------+                   |
+         | 3. Preparacion de los datos |<------+           |
+         +-----------------------------+       |           |
+                           |                   |           |
+                           v                   |           |
+         +-----------------------------+       |           |
+         | 4. Modelado                 |-------+           |
+         +-----------------------------+                   |
+                           |                               |
+                           v                               |
+         +-----------------------------+                   |
+         | 5. Evaluacion               |-------------------+
+         +-----------------------------+
+                           |
+                           v
+         +-----------------------------+
+         | 6. Despliegue               |
+         +-----------------------------+
+
+En este proyecto las 6 fases estan en UN solo archivo, en orden, y cada
+una empieza con un titulo:
+
+    mineria_pagos.py   linea 131  -> 1. COMPRENSION DEL NEGOCIO
+                       linea 143  -> 2. COMPRENSION DE LOS DATOS
+                       linea 313  -> 3. PREPARACION DE LOS DATOS
+                       linea 359  -> 4. MODELADO
+                       linea 462  -> 5. EVALUACION
+                       linea 594  -> 6. DESPLIEGUE
+                       linea 808  -> (despliegue) riesgo por alumno para la app
+                       linea 861  -> (despliegue) datos de los graficos para la app
+                       linea 901  -> (despliegue) patrones: PCA, silueta por
+                                     grupo, similitud y matriz preparada
+
+Y el ciclo completo se repite solo cada vez que se ejecuta el paquete
+SSIS: el ETL carga el Data Warehouse y la ultima tarea
+(ACTUALIZAR_DASHBOARD) vuelve a ejecutar las 6 fases con los datos
+nuevos.
+
+
+#####################################################################
+  FASE 1 - COMPRENSION DEL NEGOCIO
+#####################################################################
+
+a) QUE ES
+   Entender el problema de la organizacion ANTES de tocar los datos.
+   Se define que se quiere lograr, como se va a medir el exito y que
+   recursos y restricciones hay. Es la fase mas importante: un modelo
+   perfecto que responde la pregunta equivocada no sirve.
+
+b) TAREAS DE CRISP-DM
+   - Determinar los objetivos del negocio.
+   - Evaluar la situacion (recursos, restricciones, riesgos).
+   - Definir los objetivos de Data Mining (traducir el problema a una
+     tarea tecnica).
+   - Hacer el plan del proyecto.
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 131)
+   Problema del negocio:
+     La escuela de futbol cobra mensualidades y muchas llegan tarde.
+     Hoy solo se entera cuando el pago ya se atraso.
+
+   Objetivo del negocio:
+     Saber ANTES del vencimiento que alumnos tienen riesgo de pagar
+     tarde, para recordarle al tutor a tiempo (por WhatsApp).
+
+   Objetivo de Data Mining (la traduccion tecnica):
+     - CLASIFICACION: predecir si un pago llegara "a tiempo" (0) o
+       "atrasado" (1).
+     - AGRUPAMIENTO (clustering): separar a los alumnos en grupos segun
+       su comportamiento de pago (puntuales, ocasionales, morosos).
+
+   Criterio de exito:
+     El modelo debe detectar los atrasos MEJOR que adivinar. Como la
+     mayoria de los pagos llega a tiempo, "adivinar siempre a tiempo"
+     ya acierta mucho; por eso no basta mirar la exactitud: importa
+     cuantos atrasos detecta (sensibilidad) y el AUC (0,5 = azar).
+
+   Situacion y restricciones:
+     - Los datos estan en el Data Warehouse DW_EscuelasDeportivas,
+       tabla de hechos H_PAGOS, que carga el paquete SSIS.
+     - Los datos NO son de una escuela real: 300 pagos son los de
+       ejemplo de la base entregada (REC-) y 562 son simulados (SIM- y
+       PRB-) para tener mas casos. Lo real es el proceso.
+     - La herramienta: Python (pandas, scikit-learn, matplotlib,
+       seaborn), porque se conecta directo al SQL Server y se puede
+       automatizar al final del SSIS.
+
+d) SE ENTREGA
+   La pregunta clara ("que alumnos pagaran tarde?"), el tipo de tarea
+   (clasificacion + clustering) y como se medira el exito.
+
+
+#####################################################################
+  FASE 2 - COMPRENSION DE LOS DATOS
+#####################################################################
+
+a) QUE ES
+   Conseguir los datos, conocerlos y revisar su calidad: que columnas
+   hay, cuantos registros, como se distribuyen, si faltan valores, si
+   hay errores, y primeras relaciones entre variables (exploracion).
+
+b) TAREAS DE CRISP-DM
+   - Recolectar los datos iniciales.
+   - Describir los datos.
+   - Explorar los datos (graficos y estadisticas).
+   - Verificar la calidad de los datos.
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 143)
+   Recoleccion:
+     Una consulta SQL al Data Warehouse (linea 147) une la tabla de
+     hechos con sus dimensiones:
+       H_PAGOS + D_CATEGORIA + D_METODO_PAGO + D_ESTADO_PAGO + D_TIEMPO
+     Si no hay conexion, usa la copia datos\h_pagos_ejemplo.csv, y el
+     dashboard lo avisa ("Fuente leida: CSV de ejemplo").
+
+   Descripcion (lo que hay hoy):
+     - 862 pagos de 107 alumnos.
+     - Columnas: alumno, categoria, metodo de pago, estado del pago,
+       fecha, recibo, monto de la mensualidad, monto pagado, saldo,
+       dias de atraso y si fue atrasado (0/1).
+     - "Atrasado" lo calcula el ETL: dias_atraso = fecha de pago -
+       fecha de vencimiento; si es mayor a 0, pago_atrasado = 1.
+
+   Exploracion (5 graficos, cada uno con su explicacion):
+     Grafico 1 - Pagos por metodo: QR es el metodo mas usado.
+                 % de atraso: Efectivo 51,9 % | Tarjeta 42,3 % |
+                 QR 25,7 % | Transferencia 23,3 %.
+     Grafico 2 - Dias de atraso por categoria (boxplot).
+     Grafico 3 - Monto vs dias de atraso: correlacion -0,12
+                 (casi no hay relacion).
+     Grafico 4 - % de atraso por categoria: Sub-14 45,5 % |
+                 Sub-8 43,5 % | Sub-10 41,7 % | Sub-16 25,9 % |
+                 Sub-12 24,5 %. (Sub-14 se atrasa 21 puntos mas que
+                 Sub-12.)
+     Grafico 5 - Mapa de calor categoria x metodo de pago.
+
+     Resultado general: 299 de 862 pagos llegaron atrasados (34,7 %).
+
+   Calidad:
+     - Los numeros del script se comprobaron con consultas SQL directas
+       y coinciden exactamente (ver Explicacion_Data_Mining.txt).
+     - El ETL copia tambien los pagos ANULADOS al Data Warehouse: el
+       analisis los cuenta como pagos (limitacion conocida).
+     - Se encontro un error de datos: 45 alumnos estaban en una
+       categoria que no era de su edad. Se corrigio en la base (con
+       permiso) antes de este analisis. Las mensualidades viejas de esos
+       alumnos conservan el precio de su grupo anterior, asi que ahora
+       una categoria puede tener mas de un monto.
+
+d) SE ENTREGA
+   Los datos cargados y entendidos, 5 graficos de exploracion y las
+   primeras pistas: el metodo de pago y la categoria parecen influir;
+   el monto casi no.
+
+
+#####################################################################
+  FASE 3 - PREPARACION DE LOS DATOS
+#####################################################################
+
+a) QUE ES
+   Dejar los datos listos para el modelo: elegir que filas y columnas
+   usar, limpiarlos, crear variables nuevas, transformarlas y resolver
+   problemas como el desbalance de clases. Suele ser la fase que mas
+   tiempo lleva.
+
+b) TAREAS DE CRISP-DM
+   - Seleccionar los datos.
+   - Limpiar los datos.
+   - Construir datos (variables nuevas).
+   - Integrar datos de varias fuentes.
+   - Dar formato a los datos.
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 313)
+   Seleccion - que NO se usa y por que (decision clave):
+     monto_pagado, saldo_pendiente, dias_atraso y estado del pago se
+     conocen DESPUES de pagar. Usarlos seria "hacer trampa": el modelo
+     veria la respuesta. Esto se llama fuga de datos (data leakage).
+
+   Seleccion - que SI se usa (se conoce ANTES del vencimiento):
+     - categoria (texto)
+     - metodo de pago (texto)
+     - monto de la mensualidad (numero)
+     - % de atrasos previos (numero, variable nueva)
+
+   Construccion - variable nueva "% de atrasos previos":
+     Para cada pago, que porcentaje de los pagos ANTERIORES de ese
+     mismo alumno llego tarde. Es su historial, lo mismo que miraria
+     cualquier cobrador. Se calcula ordenando los pagos por alumno y
+     fecha y contando solo los anteriores (nunca el actual).
+
+   Limpieza:
+     El primer pago de cada alumno no tiene historial, asi que se deja
+     fuera del modelo. Quedan 755 filas para entrenar (de 862).
+
+   Formato (transformacion):
+     - Las columnas de texto se convierten en columnas 0/1 (one-hot
+       encoding): por ejemplo "Metodo = Efectivo" vale 1 o 0.
+     - Para la regresion logistica los numeros se llevan a la misma
+       escala (StandardScaler).
+
+   Matriz preparada (la tabla que entra al modelo):
+     755 filas y 12 columnas: 5 de categoria (0/1), 4 de metodo de
+     pago (0/1), el monto, el % de atrasos previos y "Atrasado" (lo que
+     se predice). La app muestra las primeras 8 filas (pantalla
+     Analisis, seccion 2). Linea 957 de mineria_pagos.py.
+
+   Desbalance de clases:
+     En las 755 filas hay 492 pagos a tiempo y 263 atrasados: 1,9 a 1.
+     Con tanta diferencia el modelo tiende a decir siempre "a tiempo".
+     Se prueba una correccion: class_weight='balanced' (le da mas peso
+     a los atrasos al aprender). Graficos 6 y 7.
+
+   Integracion:
+     La hizo el SSIS antes de Python: unio la base transaccional en el
+     Data Warehouse (hechos + dimensiones).
+
+d) SE ENTREGA
+   La tabla final para el modelo: 755 filas, 4 variables de entrada y
+   la variable a predecir (atrasado 0/1).
+
+
+#####################################################################
+  FASE 4 - MODELADO
+#####################################################################
+
+a) QUE ES
+   Elegir las tecnicas, entrenar los modelos y ajustar sus parametros.
+   Se prueban varios modelos con el MISMO metodo de prueba, para
+   compararlos de forma justa.
+
+b) TAREAS DE CRISP-DM
+   - Seleccionar la tecnica de modelado.
+   - Disenar la prueba (como se va a evaluar).
+   - Construir el modelo.
+   - Evaluar el modelo (desde lo tecnico).
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 359)
+   Tecnicas (clasificacion):
+     1. Arbol de decision (profundidad maxima 3: facil de explicar).
+     2. Random Forest (300 arboles).
+     3. Regresion logistica.
+   Cada uno se prueba SIN y CON balanceo de clases: 6 combinaciones.
+
+   Diseno de la prueba:
+     Validacion cruzada de 5 partes, SEPARANDO POR ALUMNO
+     (StratifiedGroupKFold): todos los pagos de un alumno quedan del
+     mismo lado. Asi el modelo siempre se evalua con alumnos que no vio
+     al aprender (si no, "memorizaria" a los alumnos).
+     Semilla fija = 42: el mismo dato da siempre el mismo resultado.
+
+   Resultados de la validacion cruzada (promedio de las 5 partes):
+
+     Modelo               Balanceo  Exactitud Precision Sensib.  F1    AUC
+     -------------------  --------  --------- --------- ------- ----- -----
+     Arbol de decision    no        65,8 %    52,7 %    35,3 %  0,40  0,65
+     Random Forest        no        68,9 %    60,2 %    33,2 %  0,42  0,68
+     Regresion logistica  no        69,5 %    59,8 %    39,1 %  0,47  0,70
+     Arbol de decision    si        62,8 %    47,3 %    60,1 %  0,52  0,67
+     Random Forest        si        63,3 %    48,1 %    59,3 %  0,53  0,68
+     Regresion logistica  si        66,9 %    52,1 %    62,3 %  0,57  0,70
+
+   Eleccion del mejor:
+     Se elige por F1 (equilibrio entre detectar atrasos y no dar falsas
+     alarmas): REGRESION LOGISTICA CON BALANCEO (F1 0,57; AUC 0,70).
+
+   Lo que muestra la tabla:
+     El balanceo casi DUPLICA los atrasos detectados (sensibilidad de
+     ~36 % a ~61 %), a cambio de algunas falsas alarmas mas (la
+     precision baja de ~58 % a ~49 %). Para la escuela conviene: es
+     mejor recordarle a un tutor que iba a pagar que no avisarle al que
+     se iba a atrasar.
+
+   Tecnica de agrupamiento (clustering), en la fase 6:
+     K-Means con 2 rasgos de cada alumno: % de pagos atrasados y dias
+     de atraso promedio.
+
+d) SE ENTREGA
+   Los modelos entrenados y la tabla de comparacion (grafico 8).
+
+
+#####################################################################
+  FASE 5 - EVALUACION
+#####################################################################
+
+a) QUE ES
+   Revisar si el modelo cumple el objetivo del NEGOCIO (no solo si sus
+   numeros son buenos), con datos que el modelo no vio, y decidir si
+   se puede usar, si hay que mejorarlo o si hay que volver a una fase
+   anterior.
+
+b) TAREAS DE CRISP-DM
+   - Evaluar los resultados frente a los criterios de exito.
+   - Revisar el proceso (que se hizo bien, que falto).
+   - Decidir los siguientes pasos.
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 462)
+   Prueba final con alumnos nuevos:
+     Se separa el 25 % de los alumnos (28 alumnos, 192 pagos) que el
+     modelo NO ve al aprender, y se le pide predecirlos.
+
+   Matriz de confusion (grafico 9), Regresion logistica con balanceo:
+
+                                Predijo A TIEMPO   Predijo ATRASADO
+       Fue A TIEMPO             82 (acierto)       42 (falsa alarma)
+       Fue ATRASADO             23 (no detectado)  45 (acierto)
+
+     - Acerto 127 de 192 pagos: exactitud 66,1 %.
+     - Detecto 45 de 68 atrasos: sensibilidad 66,2 %.
+     - De sus alarmas, 45 de 87 fueron atrasos reales: precision 51,7 %.
+
+   Curva ROC (grafico 10), AUC con los alumnos nuevos:
+     Arbol 0,70 | Random Forest 0,75 | Regresion logistica 0,74
+     (0,5 = adivinar al azar; 1,0 = perfecto).
+
+   Importancia de las variables (grafico 11, por permutacion: se
+   desordena una variable y se mide cuanto empeora el AUC):
+     % atrasos previos    0,097   <- la que mas pesa
+     Categoria            0,043
+     Metodo de pago       0,042
+     Monto mensualidad    0,010   <- casi no aporta
+
+   Arbol de decision dibujado (grafico 12): muestra las reglas, por
+   ejemplo "si el % de atrasos previos es mayor a 0,19 y no paga con
+   QR, predice atrasado".
+
+   Frente al criterio de exito (fase 1):
+     - SI supera al azar (AUC 0,74 > 0,5) y detecta 2 de cada 3
+       atrasos (66 %).
+     - Su exactitud (66 %) apenas supera la de adivinar siempre "a
+       tiempo" (65 %): lo que aporta es detectar atrasos, no la
+       exactitud.
+     - Conclusion honesta: es un modelo MODESTO. Sirve como apoyo para
+       priorizar recordatorios, no como certeza. Con datos reales de la
+       escuela habria que repetir el analisis.
+
+   Revision del proceso:
+     - Bien: sin fuga de datos, validacion separada por alumno, mismo
+       metodo para todos los modelos, resultados reproducibles.
+     - Limitaciones: datos de ejemplo y simulados; los anulados entran
+       al DW; pocas variables disponibles.
+
+d) SE ENTREGA
+   La decision: el modelo se puede usar como alerta temprana, avisando
+   en pantalla que es una estimacion.
+
+
+#####################################################################
+  FASE 6 - DESPLIEGUE
+#####################################################################
+
+a) QUE ES
+   Poner los resultados en manos de quien los usa: informes, tableros
+   o integracion en un sistema. Incluye planificar como se mantiene y
+   se actualiza, y cerrar el proyecto con un informe final.
+
+b) TAREAS DE CRISP-DM
+   - Planificar el despliegue.
+   - Planificar el monitoreo y el mantenimiento.
+   - Producir el informe final.
+   - Revisar el proyecto.
+
+c) EN ESTE PROYECTO (mineria_pagos.py, linea 594)
+   Agrupamiento K-Means (grafico 13):
+     - Se prueba de 2 a 6 grupos con la silueta (que tan separados
+       quedan): k=2 0,73 | k=3 0,64 | k=4 0,69 | k=5 0,69 | k=6 0,73.
+     - Se eligen 3 grupos porque son faciles de usar para la escuela
+       (aunque la silueta mas alta seria 6).
+     - Resultado:
+         Puntuales     34 alumnos   11 % de atrasos   0,6 dias promedio
+         Ocasionales   58 alumnos   43 % de atrasos   1,2 dias promedio
+         Morosos       15 alumnos   79 % de atrasos  11,6 dias promedio
+
+   Conclusiones escritas solas con los numeros (8 frases), por ejemplo:
+     "El metodo de pago si marca diferencia: Efectivo se atrasa en el
+      52 % de los casos y Transferencia solo en el 23 %."
+     "K-Means identifico 15 alumnos con comportamiento moroso: son los
+      primeros a quienes conviene recordar el pago."
+     Si cambian los datos, cambian las frases.
+
+   Productos del despliegue (carpeta resultados\):
+     - dashboard.html: todos los graficos y conclusiones en una pagina.
+     - Presentacion_Data_Mining.docx: el informe en Word.
+     - metricas.json: todos los numeros.
+     - riesgo_alumnos.json (linea 808): el riesgo de cada alumno para
+       su PROXIMO pago. Se entrena el mejor modelo con todos los datos
+       y se le da un nivel:
+         Alto  = puntaje de 0,60 o mas      -> 38 alumnos
+         Medio = entre 0,40 y 0,60          -> 34 alumnos
+         Bajo  = menos de 0,40              -> 35 alumnos
+         Sin historial suficiente = menos de 3 pagos
+       (0,50 es donde el modelo decide "atrasado"; Medio es la zona
+       dudosa alrededor de ese corte.)
+     - datos_graficos.json (linea 861): los datos para que la app web
+       dibuje los graficos en el navegador.
+     - patrones.json (linea 901): graficos para descubrir patrones:
+         * Segmentacion 2D con PCA: resume las 9 variables de cada
+           alumno (% de atrasos, dias, mayor atraso, cantidad de pagos,
+           monto y % de uso de cada metodo) en 2 ejes que guardan el
+           54 % de la informacion (eje 1: 37 %, "cuanto se atrasa";
+           eje 2: 18 %, "con que paga y cuantos pagos tiene"). Los
+           colores son los grupos de K-Means.
+         * Silueta por grupo (calidad de cada grupo, minimo 0,25):
+           Puntuales 0,65 | Ocasionales 0,61 | Morosos 0,72 (general
+           0,64). Los tres estan bien formados.
+         * Similitud del coseno entre categorias (que categorias pagan
+           parecido, de 0 a 1): las mas parecidas Sub-8 y Sub-10
+           (0,98); las mas distintas Sub-14 y Sub-16 (0,48).
+         * Muestra de la matriz preparada (fase 3).
+       En la app se puede DESCARGAR el segmento de cada alumno en CSV
+       (para campanas de recordatorio de pago).
+
+   Integracion en un sistema (la app web app_escuela):
+     - Pantalla "Analisis": los mismos graficos, interactivos, con
+       "Calculado el ..." y la fuente de los datos, mas la seccion
+       "4. Patrones y segmentos" (PCA, silueta por grupo, similitud y
+       boton "Descargar segmentos (CSV)").
+     - Pantalla "Alertas de atraso": la lista de alumnos con riesgo
+       Alto, Medio o Bajo, el motivo ("se atraso en 3 de sus ultimos 4
+       pagos") y un boton de WhatsApp para avisar al tutor. El
+       entrenador ve solo su grupo, sin telefonos ni montos.
+     - La app NO entrena ni calcula predicciones: solo lee lo que deja
+       mineria_pagos.py.
+     - La app esta pensada para el CELULAR (se instala como app): barra
+       de abajo con Cobrar e Inscribir, y el analisis en una seccion
+       aparte del menu.
+
+   Monitoreo y mantenimiento:
+     - El analisis se actualiza solo al final de cada ejecucion del
+       SSIS (tarea ACTUALIZAR_DASHBOARD): no hay que copiar nada a mano.
+     - El panel "Estado del sistema" de la app compara la base con el
+       ultimo analisis y avisa, por ejemplo: "Hay 12 pagos nuevos sin
+       analizar. Ejecuta el SSIS desde Visual Studio".
+     - Las pantallas avisan si hay un analisis mas reciente, si el
+       archivo falta o esta danado, o si el analisis salio del CSV de
+       ejemplo.
+
+   Informe final y revision:
+     documentos\Informe_completo_del_proyecto.txt (que se hizo y por
+     que), documentos\Explicacion_Data_Mining.txt (pruebas de que es
+     real) y documentos\Pasos_para_la_demostracion.txt (guia de clase).
+
+d) SE ENTREGA
+   Dashboard, Word, alertas por alumno dentro de la app, actualizacion
+   automatica con el SSIS y los documentos de cierre.
+
+
+#####################################################################
+  ANALISIS ESTADISTICO vs. DESCUBRIMIENTO DE PATRONES
+#####################################################################
+
+La pantalla Analisis de la app esta separada en dos partes:
+
+A) ANALISIS ESTADISTICO (fases 2 y 3): describe LO QUE YA PASO con
+   conteos, porcentajes y promedios. No predice ni descubre nada: es la
+   foto de los datos.
+
+   Grafico                          Que muestra
+   -------------------------------  ----------------------------------------
+   1. Pagos por metodo              cuantos pagos y atrasos hay por metodo
+   2. Dias de atraso por categoria  cuantos dias suelen atrasarse
+   3. Monto vs dias de atraso       si el monto se relaciona con el atraso
+   4. % de atraso por categoria     que categoria se atrasa mas
+   5. Mapa de calor                 % de atraso de cada categoria x metodo
+   6. Balance de clases             cuantos a tiempo y cuantos atrasados
+   -  Matriz preparada              asi entran los datos al modelo
+
+B) DESCUBRIMIENTO DE PATRONES (fases 4, 5 y 6): los algoritmos buscan
+   relaciones que no se ven a simple vista. Se buscan 3 tipos de patron:
+
+   B1. PATRON DE ATRASO: quien pagara tarde (clasificacion)
+   Grafico                    Que patron busca                 Que encontro (14/10)
+   -------------------------  -------------------------------  ------------------------------
+   8. Comparacion de modelos  que tecnica aprende mejor la     Regresion logistica con
+                              relacion datos -> atraso         balanceo (F1 0,57)
+   7. Antes/despues balanceo  si dar peso a los atrasos ayuda  detecta ~61 % en vez de ~36 %
+                              a reconocerlos
+   9. Matriz de confusion     donde acierta y donde falla,     detecta 45 de 68 atrasos
+                              con alumnos que no vio
+   10. Curva ROC              si el patron es real o azar      AUC 0,74 (0,5 = azar)
+   11. Importancia            que dato pesa mas para atrasarse % de atrasos previos
+   12. Arbol de decision      reglas "si... entonces"          ver abajo
+
+   Reglas que descubrio el arbol (la app las escribe solas):
+     - Si su % de atrasos previos esta entre 19 % y 79 % y no paga con
+       QR -> se atrasa.
+     - Si su % de atrasos previos es mayor a 79 % -> se atrasa.
+     - Si su % de atrasos previos es de 19 % o menos -> paga a tiempo.
+     - Si esta entre 19 % y 79 % pero paga con QR -> paga a tiempo.
+   En palabras: EL HISTORIAL MANDA, y pagar con QR protege del atraso.
+
+   B2. PATRON DE COMPORTAMIENTO: que alumnos pagan parecido (agrupamiento)
+   Grafico                    Que patron busca                 Que encontro (14/10)
+   -------------------------  -------------------------------  ------------------------------
+   13. K-Means                grupos de alumnos parecidos,     34 Puntuales, 58 Ocasionales,
+                              sin decirle que buscar           15 Morosos
+   Silueta por k              cuantos grupos naturales hay     el mas separado seria k=6;
+                                                               se usa k=3 (facil de usar)
+   Silueta por grupo          si cada grupo es claro o esta    0,65 / 0,61 / 0,72: todos
+                              mezclado (minimo 0,25)           bien formados
+   PCA                        si los grupos siguen separados   2 ejes = 54 %; eje 1 "cuanto
+                              mirando TODAS las variables      se atrasa", eje 2 "con que
+                                                               paga y cuantos pagos tiene"
+   Segmentos (CSV)            llevar el patron a la accion     lista de a quien recordar
+                                                               primero (Morosos)
+
+   B3. PATRON ENTRE CATEGORIAS: cuales pagan igual (similitud)
+   Similitud del coseno       que categorias tienen el mismo   Sub-8 y Sub-10 casi iguales
+                              comportamiento de pago           (0,98); Sub-14 y Sub-16 las
+                                                               mas distintas (0,48)
+
+
+#####################################################################
+  RESUMEN EN UNA TABLA
+#####################################################################
+
+  Fase                      Pregunta que responde          En el proyecto
+  ------------------------  -----------------------------  ---------------------------------
+  1. Negocio                Que problema resolvemos?       Avisar antes a quien pagara tarde
+  2. Datos                  Que datos hay y como son?      862 pagos del DW; 34,7 % atrasados
+  3. Preparacion            Como dejarlos listos?          755 filas, 4 variables, sin fuga,
+                                                           % atrasos previos, balanceo
+  4. Modelado               Que modelo funciona mejor?     3 modelos x 2; gana Regresion
+                                                           logistica con balanceo
+  5. Evaluacion             Sirve para el negocio?         AUC 0,74, detecta 2 de 3 atrasos:
+                                                           modesto, util como alerta
+  6. Despliegue             Como lo usa la escuela?        Dashboard, Word, app web (Analisis,
+                                                           Alertas, PCA y segmentos en CSV),
+                                                           se actualiza con el SSIS
+
+
+#####################################################################
+  PREGUNTAS QUE PODRIA HACER LA INGENIERA
+#####################################################################
+
+P: Por que no usaste dias_atraso o saldo_pendiente para predecir?
+R: Porque se conocen despues de pagar. Si los uso, el modelo "ve la
+   respuesta" (fuga de datos) y da numeros falsamente buenos.
+
+P: Por que separar la validacion por alumno?
+R: Porque los pagos de un mismo alumno se parecen. Si un alumno
+   aparece al entrenar y al probar, el modelo lo reconoce en vez de
+   aprender un patron. Separando por alumno, siempre se prueba con
+   alumnos nuevos.
+
+P: Por que elegiste por F1 y no por exactitud?
+R: Porque 65 % de los pagos llegan a tiempo: diciendo siempre "a
+   tiempo" ya se acierta 65 %, pero no se detecta ningun atraso. El F1
+   premia detectar atrasos sin llenar de falsas alarmas.
+
+P: Que hace el balanceo de clases?
+R: Le da mas peso a los atrasos al aprender, porque son menos (1,9 a
+   tiempo por cada atrasado). Sube los atrasos detectados de ~36 % a
+   ~61 %.
+
+P: Por que 3 grupos en K-Means si la silueta dice 6?
+R: Porque 3 grupos (puntuales, ocasionales, morosos) se pueden usar en
+   la escuela; 6 grupos serian dificiles de explicar y de accionar. La
+   silueta se muestra para que la decision sea transparente.
+
+P: El modelo es bueno?
+R: Es modesto (AUC 0,74). Supera al azar y detecta 2 de cada 3
+   atrasos, asi que sirve para priorizar recordatorios. Los datos son
+   de ejemplo y simulados: con datos reales habria que repetirlo.
+
+P: Para que sirve el PCA si ya tenias K-Means?
+R: K-Means forma los grupos con 2 rasgos. PCA toma las 9 variables del
+   alumno y las resume en 2 ejes para poder DIBUJARLAS. Si los colores
+   de K-Means se ven separados en el grafico del PCA, los grupos son
+   distintos de verdad, no solo en esos 2 rasgos. Los 2 ejes guardan el
+   54 % de la informacion: el resto se pierde al resumir.
+
+P: Por que cambiaron los numeros por categoria desde el 14/10?
+R: Porque se encontro y corrigio un error de datos: 45 alumnos estaban
+   en una categoria que no era de su edad. Al pasarlos a su categoria,
+   sus pagos cuentan en la categoria correcta. Es un ejemplo de volver
+   a la fase 2 (calidad de datos) dentro del ciclo de CRISP-DM.
+
+P: Donde esta cada fase en el codigo?
+R: En mineria_pagos.py, en orden: linea 131 (negocio), 143 (datos),
+   313 (preparacion), 359 (modelado), 462 (evaluacion) y 594
+   (despliegue). Las salidas para la app estan al final: 808 (riesgo),
+   861 (datos de graficos) y 901 (patrones).
+
+P: Como se repite el ciclo?
+R: Ejecutando el paquete SSIS: carga el Data Warehouse y su ultima
+   tarea vuelve a correr las 6 fases. El dashboard, el Word y las
+   pantallas de la app muestran la hora real del nuevo analisis.

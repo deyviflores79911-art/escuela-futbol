@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf, seleccion %}
+{% block titulo %}Horario de {{ g.nombre }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('catalogos.grupo', id_grupo=g.id_grupo) }}">← {{ g.nombre }}</a></p>
+<section class="tarjeta tarjeta-media">
+  <h1>{{ 'Editar horario' if id_horario else 'Nuevo horario' }}</h1>
+  <p class="subtitulo">Grupo {{ g.nombre }}</p>
+  <form method="post">
+    {{ csrf() }}
+    {{ seleccion('dia_semana', 'Día', dias, form.get('dia_semana'), errores, requerido=true, vacio='Elige un día') }}
+    <div class="dos-columnas">
+      {{ campo('hora_inicio', 'Hora de inicio', form.get('hora_inicio'), tipo='time', errores=errores, requerido=true) }}
+      {{ campo('hora_fin', 'Hora de fin', form.get('hora_fin'), tipo='time', errores=errores, requerido=true) }}
+    </div>
+    {{ campo('lugar', 'Lugar', form.get('lugar'), errores=errores, extra='maxlength="100" list="lugares-guardados" placeholder="Elige o escribe el lugar"') }}
+    <datalist id="lugares-guardados">{% for nombre in lugares %}<option value="{{ nombre }}">{% endfor %}</datalist>
+    <p class="ayuda">Para poner el horario de varios grupos a la vez usa <a href="{{ url_for('catalogos.horarios') }}">Grupos → Horarios</a>.</p>
+    <div class="botones">
+      <button type="submit" class="boton">Guardar</button>
+      <a class="boton boton-claro" href="{{ url_for('catalogos.grupo', id_grupo=g.id_grupo) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

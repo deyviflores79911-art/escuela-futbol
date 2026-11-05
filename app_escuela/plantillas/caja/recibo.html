@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_campos.html" import csrf %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Recibo {{ p.numero_recibo }}{% endblock %}
+{% block contenido %}
+<p class="miga no-imprimir"><a href="{{ url_for('caja.cuenta', id_alumno=p.id_alumno) }}">← Cuenta de {{ p.nombres }}</a></p>
+<div class="botones no-imprimir">
+  <button type="button" class="boton" data-imprimir>Imprimir recibo</button>
+  <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a caja</a>
+</div>
+
+{# Mismo formato que una factura, pero es un RECIBO: la escuela no tiene NIT y no puede emitir facturas #}
+<article class="recibo{{ ' recibo-anulado' if p.estado == 'Anulado' }}" aria-label="Recibo {{ p.numero_recibo }}">
+  <header class="recibo-cabeza">
+    <div class="recibo-emisor">
+      <img class="recibo-escudo" src="{{ url_for('static', filename=escuela.escudo) }}" alt="Escudo de la escuela" width="86" height="86">
+      <div>
+        <p class="recibo-escuela">{{ escuela.nombre }}</p>
+        {% if escuela.responsable %}<p>{{ escuela.responsable }}</p>{% endif %}
+        {% if escuela.direccion %}<p>{{ escuela.direccion }}</p>{% endif %}
+        {% if escuela.telefono %}<p>Teléfono: {{ escuela.telefono }}</p>{% endif %}
+        {% if escuela.ciudad %}<p>{{ escuela.ciudad }}</p>{% endif %}
+      </div>
+    </div>
+    <dl class="recibo-numero">
+      <dt>Recibo N.º</dt><dd><strong>{{ p.numero_recibo }}</strong></dd>
+      <dt>Fecha</dt><dd>{{ p.fecha_pago|fecha }}</dd>
+      <dt>Cód. cliente</dt><dd>{{ p.codigo }}</dd>
+    </dl>
+  </header>
+
+  <div class="recibo-titulo">
+    <h2>Recibo de pago</h2>
+    <p>(Sin derecho a crédito fiscal)</p>
+  </div>
+  {% if p.estado == 'Anulado' %}<p class="recibo-sello">ANULADO</p>{% endif %}
+
+  <dl class="recibo-cliente">
+    <dt>Nombre / Razón social</dt><dd>{{ p.tutor or (p.nombres ~ ' ' ~ (p.apellidos or '')) }}</dd>
+    <dt>CI</dt><dd>{{ p.tutor_ci or '—' }}</dd>
+    <dt>Alumno</dt><dd>{{ p.nombres }} {{ p.apellidos or '' }}</dd>
+    <dt>Grupo</dt><dd>{{ p.grupo }} ({{ p.categoria }})</dd>
+  </dl>
+
+  <div class="recibo-detalle-envoltura">
+    <table class="tabla tabla-simple recibo-detalle">
+      <thead><tr>
+        <th class="col-opcional">Código</th><th>Cant.</th><th class="col-opcional">Unidad</th><th>Descripción</th>
+        <th class="num">Precio unit.</th><th class="num col-opcional">Descuento</th><th class="num">Subtotal</th>
+      </tr></thead>
+      <tbody><tr>
+        <td class="col-opcional">M-{{ p.periodo }}</td>
+        <td>1</td>
+        <td class="col-opcional">Mes</td>
+        <td>Mensualidad {{ p.periodo }} · {{ p.grupo }}{% if p.monto != p.monto_mensualidad %}<br><span class="ayuda">Abono a la mensualidad de {{ p.monto_mensualidad|bs }}</span>{% endif %}</td>
+        <td class="num">{{ p.monto|coma }}</td>
+        <td class="num col-opcional">0,00</td>
+        <td class="num">{{ p.monto|coma }}</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div class="recibo-pie-tabla">
+    <p class="recibo-letras"><strong>Son: {{ p.monto|letras }}</strong></p>
+    <table class="recibo-totales">
+      <tr><th>Subtotal Bs</th><td>{{ p.monto|coma }}</td></tr>
+      <tr><th>Descuento Bs</th><td>0,00</td></tr>
+      <tr><th>Total Bs</th><td>{{ p.monto|coma }}</td></tr>
+      <tr class="recibo-a-pagar"><th>Monto pagado Bs</th><td>{{ p.monto|coma }}</td></tr>
+    </table>
+  </div>
+
+  <dl class="recibo-extra">
+    <dt>Método de pago</dt><dd>{{ p.metodo }}</dd>
+    <dt>Estado</dt><dd>{{ p.estado }}{{ ' (pago parcial)' if p.estado == 'Parcial' }}</dd>
+    <dt>Mensualidad</dt><dd>{{ p.monto_mensualidad|bs }} ·
+      {% if p.saldo_mensualidad > 0 %}saldo pendiente {{ p.saldo_mensualidad|bs }}{% else %}cubierta{% endif %}</dd>
+    {% if p.observaciones %}<dt>Observaciones</dt><dd>{{ p.observaciones }}</dd>{% endif %}
+  </dl>
+
+  <footer class="recibo-pie">
+    <span>Registrado por: {{ p.registrado_por }}</span>
+    <span class="firma">Firma y sello</span>
+  </footer>
+  <p class="recibo-legal">Este documento es un recibo interno de la escuela. No es una factura y no tiene validez para crédito fiscal.</p>
+</article>
+
+{% if p.anulable %}
+<section class="tarjeta no-imprimir">
+  <h2>Anular este pago</h2>
+  <p class="ayuda">Úsalo si el pago se registró por error. No se borra: queda como Anulado, con el motivo, y la mensualidad vuelve a tener saldo.</p>
+  <form method="post" action="{{ url_for('caja.anular', id_pago=p.id_pago) }}"
+        data-confirmar="¿Anular el pago {{ p.numero_recibo }} de {{ p.monto|bs }}? No se puede deshacer.">
+    {{ csrf() }}
+    <div class="campo">
+      <label for="motivo">Motivo de la anulación <span class="obligatorio" aria-hidden="true">*</span></label>
+      <input id="motivo" name="motivo" type="text" required minlength="5" maxlength="150" placeholder="Ej.: se registró el monto equivocado">
+    </div>
+    <button class="boton boton-peligro">Anular pago</button>
+  </form>
+</section>
+{% elif not p.numero_recibo.startswith('PAG-') %}
+<p class="ayuda no-imprimir">Este pago es de los datos anteriores ({{ p.numero_recibo[:4] }}): se puede ver e imprimir, pero no se anula desde la app.</p>
+{% endif %}
+
+{% if p.auditoria %}
+<section class="tarjeta no-imprimir">
+  <h2>Auditoría de este pago</h2>
+  <div class="tabla-envoltura"><table class="tabla">
+    <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Usuario</th><th>Monto</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for x in p.auditoria %}
+      <tr>
+        <td>{{ x.fecha.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+        <td>{{ 'Registro del pago' if x.operacion == 'INSERT' else 'Anulación' if x.operacion == 'ANULACION' else x.operacion }}</td>
+        <td>{{ x.usuario }}</td>
+        <td>{{ x.monto_nuevo|bs }}</td>
+        <td>{{ (x.estado_anterior ~ ' → ') if x.estado_anterior }}{{ x.estado_nuevo }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <p class="ayuda">La auditoría no se puede borrar ni editar desde la app.</p>
+</section>
+{% endif %}
+{% endblock %}

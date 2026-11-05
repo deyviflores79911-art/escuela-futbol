@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_campos.html" import pestanas %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Deudores{% endblock %}
+{% block contenido %}
+{{ pestanas([('reportes.deudores', 'Deudores'), ('reportes.caja', 'Resumen de caja')]) }}
+<h1>Deudores</h1>
+<p class="subtitulo">Mensualidades con saldo pendiente, de la más atrasada a la menos atrasada.</p>
+
+{% if sin_mes_actual and periodo %}
+  <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>El mes actual ({{ mes_actual }}) todavía no tiene mensualidades
+    generadas: se muestra {{ periodo }}. Puedes generarlas en <a href="{{ url_for('caja.mensualidades') }}">Caja → Mensualidades</a>.</span></p>
+{% endif %}
+
+<form class="tarjeta filtros" method="get">
+  <div class="campo">
+    <label for="periodo">Periodo</label>
+    <select id="periodo" name="periodo">
+      {% for p in periodos %}<option value="{{ p }}" {% if p == periodo %}selected{% endif %}>{{ p }}</option>{% endfor %}
+      <option value="todos" {% if periodo is none %}selected{% endif %}>Todas las deudas</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="categoria">Categoría</label>
+    <select id="categoria" name="categoria">
+      <option value="">Todas</option>
+      {% for c in categorias %}<option {% if c == categoria %}selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="botones"><button class="boton">Ver</button></div>
+</form>
+
+<div data-vivo="{{ refresco }}">
+  {% include '_actualizado.html' %}
+  <div class="indicadores">
+    <div class="tarjeta indicador"><span class="valor">{{ deudores|length }}</span><span>mensualidad{{ 'es' if deudores|length != 1 }} con saldo{{ ' en ' ~ categoria if categoria }}</span></div>
+    <div class="tarjeta indicador"><span class="valor">{{ total|bs }}</span><span>por cobrar</span></div>
+    {% set vencidas = deudores|selectattr('vencida')|list %}
+    <div class="tarjeta indicador"><span class="valor">{{ vencidas|length }}</span><span>ya vencida{{ 's' if vencidas|length != 1 }}</span></div>
+  </div>
+
+  {% if deudores %}
+  <div class="tabla-envoltura"><table class="tabla">
+    <thead><tr><th>Alumno</th><th>Tutor y teléfono</th><th>Categoría</th><th>Periodo</th><th>Adeudado</th><th>Atraso</th><th></th></tr></thead>
+    <tbody>
+    {% for d in deudores %}
+      <tr>
+        <td><strong>{{ d.nombres }} {{ d.apellidos or '' }}</strong><br><span class="ayuda">{{ d.codigo }} · {{ d.grupo }}{{ ' · baja' if d.estado_inscripcion != 'ACTIVA' }}</span></td>
+        <td>{{ d.tutor or '—' }}<br>
+          {% if d.contacto %}<span class="ayuda">{{ d.contacto }}</span>
+            {% if d.wa %}<a class="boton boton-claro boton-chico" target="_blank" rel="noopener"
+               href="https://wa.me/{{ d.wa }}?text={{ ('Hola, le escribimos de la Escuela de Fútbol Fortaleza: la mensualidad ' ~ d.periodo ~ ' de ' ~ d.nombres ~ ' tiene un saldo pendiente.')|urlencode }}">WhatsApp</a>{% endif %}
+          {% else %}<span class="ayuda">Sin teléfono</span>{% endif %}
+        </td>
+        <td>{{ d.categoria }}</td>
+        <td>{{ d.periodo }}<br><span class="ayuda">vence {{ d.fecha_vencimiento|fecha }}</span></td>
+        <td><strong>{{ d.adeudado|bs }}</strong>{% if d.pagado > 0 %}<br><span class="ayuda">pagó {{ d.pagado|bs }} de {{ d.monto|bs }}</span>{% endif %}</td>
+        <td>{% if d.vencida %}<span class="estado estado-mal">{{ icono('alerta') }} {{ d.dias_atraso }} día{{ 's' if d.dias_atraso != 1 }}</span>
+            {% else %}<span class="estado estado-medio">{{ icono('info') }} Aún no vence</span>{% endif %}</td>
+        <td><a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=d.id_mensualidad) }}">Cobrar</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="tarjeta vacio">
+    <p>{{ icono('check') }} Nadie debe {{ ('en ' ~ categoria ~ ' ') if categoria }}{{ ('en ' ~ periodo) if periodo else 'nada' }}. ¡Todo cobrado!</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

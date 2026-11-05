@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf, seleccion %}
+{% block titulo %}{{ 'Editar grupo' if id_grupo else 'Nuevo grupo' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('catalogos.grupo', id_grupo=id_grupo) if id_grupo else url_for('catalogos.grupos') }}">← Volver</a></p>
+<section class="tarjeta">
+  <h1>{{ 'Editar grupo' if id_grupo else 'Nuevo grupo' }}</h1>
+  <form method="post">
+    {{ csrf() }}
+    <div class="dos-columnas">
+      {{ campo('nombre', 'Nombre del grupo', form.get('nombre'), errores=errores, requerido=true, extra='maxlength="50" placeholder="Ej.: Sub-10 B"') }}
+      {{ seleccion('id_categoria', 'Categoría', opciones_categorias, form.get('id_categoria'), errores, requerido=true, vacio='Elige una categoría') }}
+      {{ seleccion('id_entrenador', 'Entrenador', opciones_entrenadores, form.get('id_entrenador'), errores, requerido=true, vacio='Elige un entrenador') }}
+      {{ campo('cupo_maximo', 'Cupo máximo (alumnos)', form.get('cupo_maximo'), tipo='number', errores=errores, requerido=true, extra='min="1" max="200" step="1"') }}
+      {{ campo('precio_mensual', 'Precio mensual (Bs)', form.get('precio_mensual'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"') }}
+    </div>
+    {% if id_grupo %}<p class="ayuda">El cupo no puede quedar por debajo de los alumnos ya inscritos. Un precio nuevo se usa en las mensualidades que se generen después.</p>{% endif %}
+    <div class="botones">
+      <button type="submit" class="boton">Guardar</button>
+      <a class="boton boton-claro" href="{{ url_for('catalogos.grupo', id_grupo=id_grupo) if id_grupo else url_for('catalogos.grupos') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  {# Se puede instalar en el celular como una app (ícono en la pantalla de inicio) #}
+  <meta name="theme-color" content="#111111">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Fortaleza">
+  <link rel="manifest" href="{{ url_for('static', filename='app.webmanifest') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icono-180.png') }}">
+  <title>{% block titulo %}Fortaleza{% endblock %} · Escuela de Fútbol Fortaleza</title>
+  {# Fija el tema ANTES de dibujar la página (evita el parpadeo): elección guardada o preferencia del sistema #}
+  <script>
+    (function () {
+      var tema = null;
+      try { tema = localStorage.getItem("tema"); } catch (e) {}
+      if (tema !== "claro" && tema !== "oscuro") {
+        tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+      }
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+{% from "_iconos.html" import icono %}
+<body{% if usuario %} data-huella="{{ huella_datos() }}" data-url-cambios="{{ url_for('acceso.cambios') }}"{% endif %}>
+  <header class="cabecera">
+    <a class="marca" href="{{ url_for('acceso.inicio') }}" aria-label="Escuela de Fútbol Fortaleza — inicio"><img src="{{ url_for('static', filename='img/escudo-barra.png') }}" alt="" width="38" height="38"><span class="marca-texto"><small>Escuela de Fútbol</small><span>Fortaleza</span></span></a>
+    <button type="button" class="boton-tema" id="boton-tema" aria-label="Cambiar entre modo claro y oscuro" title="Cambiar modo claro / oscuro">
+      {{ icono('luna') }}{{ icono('sol') }}
+    </button>
+    {% if usuario %}
+    <input type="checkbox" id="menu-abrir" class="menu-abrir" aria-label="Abrir menú">
+    <label for="menu-abrir" class="menu-boton" role="button" tabindex="0">{{ icono('menu') }}<span>Menú</span></label>
+    {# Menú completo ordenado por secciones. En el celular sube desde abajo con "Más" #}
+    {% set actual = request.endpoint or '' %}
+    {% macro opcion(endpoint, texto, activo) %}<a href="{{ url_for(endpoint) }}" {% if activo %}aria-current="page"{% endif %}>{{ texto }}</a>{% endmacro %}
+    <nav class="menu" aria-label="Menú principal">
+      {{ opcion('acceso.inicio', 'Inicio', actual == 'acceso.inicio') }}
+      {% if es_dueno %}
+        <p class="menu-titulo">Dinero</p>
+        {{ opcion('caja.caja', 'Cobrar', actual in ('caja.caja', 'caja.cuenta', 'caja.cobrar', 'caja.recibo')) }}
+        {{ opcion('reportes.deudores', 'Deudores', actual == 'reportes.deudores') }}
+        {{ opcion('caja.mensualidades', 'Mensualidades del mes', actual == 'caja.mensualidades') }}
+        {{ opcion('reportes.caja', 'Resumen de caja', actual == 'reportes.caja') }}
+        <p class="menu-titulo">Escuela</p>
+        {{ opcion('alumnos.inscribir_inicio', 'Inscribir', actual == 'alumnos.inscribir_inicio') }}
+        {{ opcion('alumnos.lista', 'Alumnos', actual in ('alumnos.lista', 'alumnos.ficha', 'alumnos.alumno_form')) }}
+        {{ opcion('alumnos.tutores', 'Tutores', actual.startswith('alumnos.tutor')) }}
+        {{ opcion('catalogos.grupos', 'Grupos y categorías', actual in ('catalogos.grupos', 'catalogos.grupo', 'catalogos.grupo_form', 'catalogos.categorias', 'catalogos.categoria_form')) }}
+        {{ opcion('catalogos.horarios', 'Horarios y lugares', actual in ('catalogos.horarios', 'catalogos.horario_form')) }}
+        {{ opcion('usuarios.lista', 'Entrenadores (usuarios)', actual.startswith('usuarios.')) }}
+        {{ opcion('reportes.mi_grupo', 'Mi grupo', actual == 'reportes.mi_grupo') }}
+      {% else %}
+        {{ opcion('reportes.mi_grupo', 'Mi grupo', actual == 'reportes.mi_grupo') }}
+      {% endif %}
+      <p class="menu-titulo">Mi cuenta</p>
+      <a class="quien" href="{{ url_for('acceso.mi_clave') }}" {% if actual == 'acceso.mi_clave' %}aria-current="page"{% endif %}>{{ usuario.nombres }} · {{ nombre_rol }} — cambiar contraseña</a>
+      <form method="post" action="{{ url_for('acceso.logout') }}" class="en-linea">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="boton boton-claro boton-chico">Salir</button>
+      </form>
+    </nav>
+    <label for="menu-abrir" class="menu-fondo" aria-hidden="true"></label>
+    {% endif %}
+  </header>
+
+  <main class="contenido">
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% for tipo, texto in mensajes %}
+        <p class="mensaje mensaje-{{ tipo }}" role="status">
+          {{ icono({'ok': 'check', 'error': 'alerta'}.get(tipo, 'info')) }}<span>{{ texto }}</span>
+        </p>
+      {% endfor %}
+    {% endwith %}
+    {% block contenido %}{% endblock %}
+  </main>
+
+  {% if usuario %}
+  {# Celular: barra de abajo, al alcance del pulgar, con lo que más se usa (máx. 5 opciones). "Más" abre el menú completo #}
+  {% set actual = request.endpoint or '' %}
+  {% macro pestana(endpoint, nombre_icono, texto, activo) %}
+    <a href="{{ url_for(endpoint) }}" {% if activo %}aria-current="page"{% endif %}>{{ icono(nombre_icono) }}<span>{{ texto }}</span></a>
+  {% endmacro %}
+  <nav class="barra-inferior" aria-label="Menú rápido">
+    {{ pestana('acceso.inicio', 'casa', 'Inicio', actual == 'acceso.inicio') }}
+    {% if es_dueno %}
+      {% set nuevo_alumno = actual == 'alumnos.alumno_form' and not (request.view_args or {}).get('id_alumno') %}
+      {{ pestana('caja.caja', 'billetera', 'Cobrar', actual in ('caja.caja', 'caja.cuenta', 'caja.cobrar', 'caja.recibo')) }}
+      {{ pestana('alumnos.inscribir_inicio', 'persona-mas', 'Inscribir', actual == 'alumnos.inscribir_inicio' or nuevo_alumno) }}
+      {{ pestana('alumnos.lista', 'personas', 'Alumnos', actual in ('alumnos.lista', 'alumnos.ficha') or (actual == 'alumnos.alumno_form' and not nuevo_alumno)) }}
+    {% else %}
+      {{ pestana('reportes.mi_grupo', 'personas', 'Mi grupo', actual == 'reportes.mi_grupo') }}
+    {% endif %}
+    <label for="menu-abrir" role="button" tabindex="0">{{ icono('menu') }}<span>Más</span></label>
+  </nav>
+  {% endif %}
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

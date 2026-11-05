@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf %}
+{% block titulo %}{{ 'Editar categoría' if id_categoria else 'Nueva categoría' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('catalogos.categorias') }}">← Categorías</a></p>
+<section class="tarjeta tarjeta-media">
+  <h1>{{ 'Editar categoría' if id_categoria else 'Nueva categoría' }}</h1>
+  <form method="post">
+    {{ csrf() }}
+    {{ campo('nombre', 'Nombre', form.get('nombre'), errores=errores, requerido=true, extra='maxlength="50" placeholder="Ej.: Sub-10"') }}
+    <div class="dos-columnas">
+      {{ campo('edad_minima', 'Edad mínima (años)', form.get('edad_minima'), tipo='number', errores=errores, requerido=true, extra='min="3" max="25"') }}
+      {{ campo('edad_maxima', 'Edad máxima (años)', form.get('edad_maxima'), tipo='number', errores=errores, requerido=true, extra='min="3" max="25"') }}
+    </div>
+    <div class="botones">
+      <button type="submit" class="boton">Guardar</button>
+      <a class="boton boton-claro" href="{{ url_for('catalogos.categorias') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<h1 class="saludo">Hola, {{ usuario.nombres }}</h1>
+{% if fuera_de_edad %}
+<section class="mensaje mensaje-error" role="alert">
+  <div>
+    <strong>{{ icono('alerta') }} {{ fuera_de_edad|length }} alumno{{ 's' if fuera_de_edad|length != 1 }} entrena{{ 'n' if fuera_de_edad|length != 1 }} en un grupo que no es de su edad.</strong>
+    Dalo de baja de ese grupo e inscríbelo en el que le corresponde.
+    <details><summary>Ver la lista</summary>
+      <ul class="lista-simple">{% for a in fuera_de_edad %}
+        <li><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">{{ a.alumno }}</a> ({{ a.codigo }}) · {{ a.edad }} años · está en {{ a.grupo }} ({{ a.rango }} años)</li>
+      {% endfor %}</ul>
+    </details>
+  </div>
+</section>
+{% endif %}
+
+{# Lo que más se hace, grande y al alcance del pulgar #}
+<nav class="acciones-grandes" aria-label="Acciones principales">
+  <a class="accion-grande accion-principal" href="{{ url_for('caja.caja') }}">
+    {{ icono('billetera') }}<span class="accion-nombre">Cobrar</span><span class="accion-detalle">Registrar un pago</span>
+  </a>
+  <a class="accion-grande accion-principal" href="{{ url_for('alumnos.inscribir_inicio') }}">
+    {{ icono('persona-mas') }}<span class="accion-nombre">Inscribir</span><span class="accion-detalle">Alumno nuevo</span>
+  </a>
+  <a class="accion-grande" href="{{ url_for('reportes.deudores', periodo='todos') }}">
+    {{ icono('alerta') }}<span class="accion-nombre">Deudores</span>
+    <span class="accion-detalle">{% if deudas.cantidad %}{{ deudas.total|bs }} por cobrar{% else %}Nadie debe{% endif %}</span>
+  </a>
+  <a class="accion-grande" href="{{ url_for('alumnos.lista') }}">
+    {{ icono('personas') }}<span class="accion-nombre">Alumnos</span><span class="accion-detalle">{{ alumnos.activos or 0 }} activos</span>
+  </a>
+</nav>
+
+<a class="tarjeta resumen-hoy" href="{{ url_for('reportes.caja') }}">
+  <span class="ayuda">Cobrado hoy</span>
+  <strong>{{ hoy.total|bs }}</strong>
+  <span class="ayuda">{{ hoy.cantidad }} pago{{ 's' if hoy.cantidad != 1 }} · ver resumen de caja {{ icono('flecha') }}</span>
+</a>
+
+<h2 class="titulo-seccion">Más opciones</h2>
+<nav class="lista-opciones" aria-label="Otras opciones">
+  <a href="{{ url_for('catalogos.horarios') }}">{{ icono('mapa') }}<span>Horarios y lugares</span>{{ icono('flecha') }}</a>
+  <a href="{{ url_for('catalogos.grupos') }}">{{ icono('personas') }}<span>Grupos y categorías</span>{{ icono('flecha') }}</a>
+  <a href="{{ url_for('caja.mensualidades') }}">{{ icono('billetera') }}<span>Mensualidades del mes</span>{{ icono('flecha') }}</a>
+  <a href="{{ url_for('usuarios.lista') }}">{{ icono('personas') }}<span>Entrenadores (usuarios)</span>{{ icono('flecha') }}</a>
+</nav>
+
+{% endblock %}

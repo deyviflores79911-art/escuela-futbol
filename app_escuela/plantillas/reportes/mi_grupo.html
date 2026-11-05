@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Mi grupo{% endblock %}
+{% block contenido %}
+<h1>Mi grupo</h1>
+<p class="subtitulo">Tus alumnos, tus horarios y quién está al día. No se muestran montos ni métodos de pago.</p>
+
+<div data-vivo="{{ refresco }}">
+  {% include '_actualizado.html' %}
+  {% for g in grupos %}
+  <section class="tarjeta">
+    <div class="barra-titulo">
+      <div>
+        <h2>{{ g.nombre }}</h2>
+        <p class="ayuda">{{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años)</p>
+      </div>
+      <div class="resumen-grupo">
+        <span class="estado estado-ok">{{ icono('check') }} {{ g.al_dia }} al día</span>
+        <span class="estado estado-mal">{{ icono('alerta') }} {{ g.deben }} debe{{ 'n' if g.deben != 1 }}</span>
+      </div>
+    </div>
+    <div class="rejilla-ficha">
+      <div>
+        <h3 class="subtitulo-chico">Horarios</h3>
+        {% if g.horarios %}
+          <ul class="lista-simple">{% for h in g.horarios %}<li>{{ h.dia }} {{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}{{ ' · ' ~ h.lugar if h.lugar }}{% if mapa(h.lugar) %} <a class="como-llegar" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">Cómo llegar</a>{% endif %}</li>{% endfor %}</ul>
+        {% else %}<p class="ayuda">Sin horarios activos.</p>{% endif %}
+      </div>
+      <div>
+        <h3 class="subtitulo-chico">Cupo</h3>
+        <p>{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados · {{ g.libres }} libre{{ 's' if g.libres != 1 }}</p>
+        {% set porcentaje = ((g.inscritos / g.cupo_maximo * 100) if g.cupo_maximo else 0)|round|int %}
+        <div class="cupo" role="img" aria-label="{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados"><span style="width: {{ [porcentaje, 100]|min }}%"></span></div>
+      </div>
+    </div>
+    {% if g.alumnos %}
+    <div class="tabla-envoltura"><table class="tabla tabla-compacta">
+      <thead><tr><th>Alumno</th><th>Edad</th><th>Pagos</th></tr></thead>
+      <tbody>
+      {% for a in g.alumnos %}
+        <tr>
+          <td><strong>{{ a.alumno }}</strong><br><span class="ayuda">{{ a.codigo }}</span></td>
+          <td>{{ a.edad if a.edad is not none else '—' }}{% if a.fuera_de_edad %}<br><span class="estado estado-mal">{{ icono('alerta') }} Fuera de su categoría</span>{% endif %}</td>
+          <td>{% if a.debe %}<span class="estado estado-mal">{{ icono('alerta') }} Debe</span>
+              {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% set fuera = g.alumnos|selectattr('fuera_de_edad')|list|length %}
+    {% if fuera %}<p class="ayuda">{{ icono('alerta') }} {{ fuera }} alumno{{ 's' if fuera != 1 }} con edad fuera de {{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años). Avisa al dueño para cambiarlo{{ 's' if fuera != 1 }} de grupo.</p>{% endif %}
+    <p class="ayuda">"Debe" = tiene saldo en alguna mensualidad ya vencida. Recuérdaselo al tutor; los cobros los registra el dueño.</p>
+    {% else %}
+      <p class="vacio">Todavía no hay alumnos inscritos en este grupo.</p>
+    {% endif %}
+  </section>
+  {% else %}
+  <div class="tarjeta vacio">
+    <p>No tienes grupos asignados.{% if es_dueno %} Si también entrenas, asígnate un grupo en <a href="{{ url_for('catalogos.grupos') }}">Grupos</a> (como entrenador elige tu nombre).{% else %} Habla con el dueño de la escuela.{% endif %}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

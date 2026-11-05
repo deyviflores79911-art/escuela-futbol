@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "_campos.html" import campo, csrf, pestanas %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Horarios{% endblock %}
+{% block contenido %}
+<h1>Horarios</h1>
+{{ pestanas([('catalogos.grupos', 'Grupos'), ('catalogos.categorias', 'Categorías'), ('catalogos.horarios', 'Horarios')]) }}
+<p class="subtitulo">Pon el horario de la semana para varios grupos a la vez. Primero unos días en un lugar
+  (por ejemplo lunes, miércoles y viernes) y después otros días en otro lugar.</p>
+
+<section class="tarjeta">
+  <h2>Poner horario</h2>
+  <form method="post" class="form-horarios">
+    {{ csrf() }}
+    <fieldset class="campo-grupo">
+      <legend>¿Qué quieres hacer?</legend>
+      <div class="opciones-dias">
+        <label class="opcion-chip"><input type="radio" name="accion" value="poner" {% if form.get('accion') != 'quitar' %}checked{% endif %}> Poner entrenamiento</label>
+        <label class="opcion-chip"><input type="radio" name="accion" value="quitar" {% if form.get('accion') == 'quitar' %}checked{% endif %}> Quitar entrenamiento</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="campo-grupo">
+      <legend>Días <span class="obligatorio" aria-hidden="true">*</span></legend>
+      <div class="opciones-dias">
+        {% for valor, texto in dias %}
+          <label class="opcion-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if valor in form.getlist('dias') %}checked{% endif %}> {{ texto }}</label>
+        {% endfor %}
+      </div>
+      {% if errores.dias %}<p class="error-campo">{{ errores.dias }}</p>{% endif %}
+    </fieldset>
+
+    <div class="solo-poner">
+      <div class="dos-columnas">
+        {{ campo('hora_inicio', 'Hora de inicio', form.get('hora_inicio', '15:00'), tipo='time', errores=errores) }}
+        {{ campo('hora_fin', 'Hora de fin', form.get('hora_fin', '16:30'), tipo='time', errores=errores) }}
+      </div>
+      <div class="campo">
+        <label for="lugar">Lugar</label>
+        <select id="lugar" name="lugar" data-alternar="lugar-nuevo" data-mostrar-con="__nuevo__"
+                {% if errores.lugar %}aria-invalid="true"{% endif %}>
+          {% for nombre in lugares %}<option value="{{ nombre }}" {% if form.get('lugar') == nombre %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+          <option value="__nuevo__" {% if form.get('lugar') == '__nuevo__' or not lugares %}selected{% endif %}>+ Otro lugar…</option>
+        </select>
+        {% if errores.lugar %}<p class="error-campo">{{ errores.lugar }}</p>{% endif %}
+      </div>
+      <fieldset class="grupo-campos" id="lugar-nuevo">
+        {{ campo('lugar_nuevo', 'Nombre del lugar nuevo', form.get('lugar_nuevo'), errores=errores, extra='maxlength="100" placeholder="Ej.: Cancha del barrio Los Lotes"') }}
+        {{ campo('enlace_nuevo', 'Enlace de Google Maps (opcional)', form.get('enlace_nuevo'), tipo='url', errores=errores, extra='placeholder="https://maps.app.goo.gl/..."') }}
+        <p class="ayuda">En Google Maps toca el lugar → Compartir → Copiar enlace, y pégalo aquí.</p>
+      </fieldset>
+    </div>
+
+    <fieldset class="campo-grupo">
+      <legend>Grupos <span class="obligatorio" aria-hidden="true">*</span></legend>
+      <div class="opciones-dias">
+        <label class="opcion-chip opcion-todos"><input type="checkbox" data-marcar-todos="grupos"> Todos</label>
+        {% for g in grupos %}
+          <label class="opcion-chip"><input type="checkbox" name="grupos" value="{{ g.id_grupo }}" {% if g.id_grupo|string in form.getlist('grupos') %}checked{% endif %}> {{ g.nombre }}</label>
+        {% endfor %}
+      </div>
+      {% if errores.grupos %}<p class="error-campo">{{ errores.grupos }}</p>{% endif %}
+    </fieldset>
+
+    <p class="ayuda">Si un grupo ya entrena alguno de esos días, ese horario se reemplaza (el anterior queda desactivado, no se borra).</p>
+    <div class="botones"><button type="submit" class="boton">Guardar</button></div>
+  </form>
+</section>
+
+<h2 class="titulo-seccion">Así queda la semana</h2>
+<div class="rejilla-grupos">
+  {% for g in grupos %}
+  <section class="tarjeta tarjeta-grupo enlace-tarjeta">
+    <div class="cabeza-grupo"><h2>{{ g.nombre }}</h2><a class="boton boton-claro boton-chico" href="{{ url_for('catalogos.grupo', id_grupo=g.id_grupo) }}">Ver grupo</a></div>
+    {% if g.semana %}
+      <ul class="lista-simple">
+        {% for h in g.semana %}
+          <li><strong>{{ h.dia }}</strong> {{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}{{ ' · ' ~ h.lugar if h.lugar }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="ayuda">{{ icono('alerta') }} Sin horario: todavía no entrena ningún día.</p>
+    {% endif %}
+  </section>
+  {% else %}
+  <p class="vacio">No hay grupos activos.</p>
+  {% endfor %}
+</div>
+
+<h2 class="titulo-seccion" id="lugares">Lugares de entrenamiento</h2>
+<section class="tarjeta">
+  {% if lugares %}
+  <ul class="lista-lugares">
+    {% for nombre, url in lugares.items() %}
+      <li>
+        <span>{{ nombre }}</span>
+        <span class="acciones">
+          <a class="como-llegar" href="{{ url }}" target="_blank" rel="noopener">Cómo llegar</a>
+          <form method="post" action="{{ url_for('catalogos.lugar_quitar') }}" class="en-linea"
+                data-confirmar="¿Quitar {{ nombre }} de la lista? Los horarios que ya lo usan no cambian.">
+            {{ csrf() }}<input type="hidden" name="nombre" value="{{ nombre }}">
+            <button class="boton boton-claro boton-chico">Quitar</button>
+          </form>
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p class="ayuda">Todavía no hay lugares guardados.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('catalogos.lugar_nuevo') }}" class="form-cobro">
+    {{ csrf() }}
+    <h3 class="subtitulo-chico">Agregar lugar</h3>
+    {{ campo('nombre', 'Nombre', '', errores={}, requerido=true, extra='maxlength="100" placeholder="Ej.: Club Deportivo Huracán del Sur"') }}
+    {{ campo('enlace', 'Enlace de Google Maps', '', tipo='url', errores={}, requerido=true, extra='placeholder="https://maps.app.goo.gl/..."') }}
+    <div class="botones"><button type="submit" class="boton boton-claro">Agregar lugar</button></div>
+  </form>
+</section>
+{% endblock %}
