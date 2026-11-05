@@ -5,7 +5,7 @@ Conexión a Sistema_EscuelasDeportivas.
 Reglas: siempre parámetros (?), nunca texto concatenado; lo que escribe
 más de una tabla va dentro de transaccion() (o todo o nada).
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 
 import config
 
@@ -59,8 +59,9 @@ class _CursorNube:
 
 
 class _ConexionNube:
-    def __init__(self, cn):
+    def __init__(self, cn, compartida=False):
         self._cn = cn
+        self._compartida = compartida   # la comparte toda la página: se cierra al terminar la petición
 
     def cursor(self):
         return _CursorNube(self._cn.cursor())
@@ -80,10 +81,32 @@ class _ConexionNube:
         self._cn.rollback()
 
     def close(self):
-        self._cn.close()
+        if not self._compartida:
+            self._cn.close()
 
 
 def _conectar_nube():
+    """Una sola conexión por página (abrir una conexión segura hasta Azure tarda; abrir una por consulta sería lento)."""
+    from flask import g, has_app_context
+    if has_app_context():
+        if g.get("_bd_nube") is None:
+            g._bd_nube = _abrir_nube()
+        return _ConexionNube(g._bd_nube, compartida=True)
+    return _ConexionNube(_abrir_nube())
+
+
+def cerrar_conexion(_error=None):
+    """Al terminar cada petición: deshace lo que haya quedado abierto y cierra la conexión compartida."""
+    from flask import g
+    cn = g.pop("_bd_nube", None)
+    if cn is not None:
+        with suppress(Exception):   # si la conexión ya se cortó, igual se intenta cerrar
+            cn.rollback()
+        with suppress(Exception):
+            cn.close()
+
+
+def _abrir_nube():
     import pymssql
     try:
         # login_timeout amplio: la base gratis de Azure "se duerme" y tarda en despertar la primera vez
@@ -93,7 +116,7 @@ def _conectar_nube():
     except pymssql.Error as e:
         raise ErrorBD("No se pudo conectar con la base de datos en la nube. "
                       "Si la base estaba dormida, espera un minuto y recarga la página.") from e
-    return _ConexionNube(cn)
+    return cn
 
 
 # ---------------------------------------------------------------- Consultas

@@ -12,7 +12,7 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 
 import config
 from config import Config
-from datos import lugares, usuarios
+from datos import bd, lugares, usuarios
 from datos.bd import ErrorBD
 from datos.letras import monto_en_letras
 from rutas import (
@@ -60,6 +60,7 @@ def crear_app():
     csrf.init_app(app)
 
     app.before_request(seguridad.cargar_usuario)
+    app.teardown_appcontext(bd.cerrar_conexion)   # nube: cierra la conexión compartida de la página
     app.context_processor(seguridad.datos_plantilla)
     app.add_template_filter(fecha)
     app.add_template_filter(bs)

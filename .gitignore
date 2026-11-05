@@ -12,3 +12,6 @@ venv/
 .vscode/
 .idea/
 *.log
+
+# Enlace local con Vercel
+.vercel/
