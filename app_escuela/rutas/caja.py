@@ -137,6 +137,7 @@ def cobrar(id_mensualidad):
                 flash(str(e), "error")
     else:
         form = {"monto": f"{m['saldo']:.2f}", "fecha_pago": date.today().isoformat(),
+                "id_metodo_pago": pagos.metodo_sugerido(m["id_alumno"]),
                 "enviar_whatsapp": "si" if m["tutor_celular"] else "",
                 "enviar_correo": "si" if m["tutor_correo"] and correo.configurado() else ""}
     if m["saldo"] <= 0 and request.method == "GET":
@@ -157,7 +158,8 @@ def recibo(id_pago):
     return render_template("caja/recibo.html", p=p, escuela=config.ESCUELA,
                            wa=alumnos.numero_whatsapp(p["tutor_celular"]) or "",
                            mensaje_wa=render_template("caja/_mensaje_recibo.txt", p=p, escuela=config.ESCUELA).strip(),
-                           abrir_whatsapp=request.args.get("whatsapp") == "1", correo_listo=correo.configurado())
+                           abrir_whatsapp=request.args.get("whatsapp") == "1", correo_listo=correo.configurado(),
+                           siguiente=pagos.primera_con_saldo([p["id_alumno"]]).get(p["id_alumno"]))
 
 
 def _enviar_recibo_por_correo(p):

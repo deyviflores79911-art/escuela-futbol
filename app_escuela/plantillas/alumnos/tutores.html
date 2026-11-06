@@ -10,7 +10,7 @@
   </div>
   <a class="boton" href="{{ url_for('alumnos.tutor_form') }}">{{ icono('mas') }} Nuevo tutor</a>
 </div>
-<form class="tarjeta filtros filtros-alumnos" method="get" role="search">
+<form class="tarjeta filtros filtros-alumnos" method="get" role="search" data-busqueda-vivo="#resultados">
   <div class="campo">
     <label for="q">Buscar</label>
     <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" placeholder="Nombre, apellido, CI o teléfono">
@@ -20,6 +20,7 @@
     {% if q %}<a class="boton boton-claro" href="{{ url_for('alumnos.tutores') }}">Quitar filtro</a>{% endif %}
   </div>
 </form>
+<div id="resultados" aria-live="polite">
 {% if tutores %}
 <p class="ayuda">{{ tutores|length }} tutor{{ 'es' if tutores|length != 1 }}{% if tutores|length >= maximo %} (se muestran los primeros {{ maximo }}){% endif %}.</p>
 <ul class="lista-filas">
@@ -36,4 +37,5 @@
   <a class="boton" href="{{ url_for('alumnos.tutor_form') }}">{{ icono('mas') }} Registrar un tutor</a>
 </div>
 {% endif %}
+</div>
 {% endblock %}

@@ -46,8 +46,9 @@ CADENA_CONEXION = (
     "Trusted_Connection=yes;"
 )
 
-# Minutos sin actividad antes de cerrar la sesión
+# Minutos sin actividad antes de cerrar la sesión (si no se marcó "Mantener la sesión en este celular")
 MINUTOS_INACTIVIDAD = 30
+DIAS_RECORDAR = 30   # con "Mantener la sesión": hasta 30 días sin volver a escribir la contraseña
 
 # Datos de la escuela para el recibo. La escuela NO tiene NIT: emite RECIBOS, no facturas.
 # Lo que quede vacío no se imprime.
@@ -83,7 +84,7 @@ def _clave_secreta():
 
 class Config:
     SECRET_KEY = _clave_secreta()
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=MINUTOS_INACTIVIDAD)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=DIAS_RECORDAR)   # la inactividad de 30 min la controla rutas/seguridad.py
     SESSION_REFRESH_EACH_REQUEST = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

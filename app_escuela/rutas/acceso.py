@@ -36,7 +36,7 @@ def login():
             if error:
                 flash(error, "error")
             else:
-                iniciar_sesion(u)
+                iniciar_sesion(u, recordar=request.form.get("recordar") == "si")
                 return redirect(destino_interno(request.args.get("siguiente"), url_for("acceso.inicio")))
     return render_template("login.html", correo=correo)
 

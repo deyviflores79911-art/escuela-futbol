@@ -37,6 +37,20 @@ def periodo_actual():
     return date.today().strftime("%Y-%m")
 
 
+def metodo_sugerido(id_alumno):
+    """El método con que pagó la última vez este alumno; si nunca pagó, el más usado en la escuela."""
+    fila = consultar_uno(
+        """SELECT TOP 1 p.id_metodo_pago FROM PAGO p
+           JOIN ESTADO_PAGO e ON e.id_estado_pago = p.id_estado_pago
+           JOIN MENSUALIDAD m ON m.id_mensualidad = p.id_mensualidad
+           JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+           WHERE i.id_alumno = ? AND e.nombre <> 'Anulado'
+           ORDER BY p.fecha_pago DESC, p.id_pago DESC""", (id_alumno,))
+    if not fila:
+        fila = consultar_uno("SELECT TOP 1 id_metodo_pago FROM PAGO GROUP BY id_metodo_pago ORDER BY COUNT(*) DESC")
+    return fila["id_metodo_pago"] if fila else None
+
+
 def metodos_activos():
     return consultar("SELECT id_metodo_pago, nombre FROM METODO_PAGO WHERE estado = 'ACTIVO' ORDER BY id_metodo_pago")
 

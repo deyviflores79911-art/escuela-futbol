@@ -11,12 +11,13 @@
 <section class="tarjeta">
   <h2>¿Ya está registrado?</h2>
   
-  <form method="get" role="search" class="form-buscar">
+  <form method="get" role="search" class="form-buscar" data-busqueda-vivo="#resultados">
     <label for="q" class="solo-lector">Buscar alumno</label>
     <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" placeholder="Nombre, código o tutor" enterkeyhint="search">
     <button class="boton">Buscar</button>
   </form>
-  {% if q %}
+  <div id="resultados" aria-live="polite">
+{% if q %}
     {% if encontrados %}
     <ul class="lista-resultados">
       {% for a in encontrados %}
@@ -28,5 +29,6 @@
     </ul>
     {% else %}<p class="vacio">No se encontró «{{ q }}». Regístralo como alumno nuevo.</p>{% endif %}
   {% endif %}
+</div>
 </section>
 {% endblock %}

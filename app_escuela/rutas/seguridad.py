@@ -14,9 +14,10 @@ from datos.usuarios import DUENO, ENTRENADOR, NOMBRE_ROL
 CABECERA_AUTOMATICA = "X-Consulta-Automatica"   # la envían los refrescos automáticos del navegador
 
 
-def iniciar_sesion(u):
+def iniciar_sesion(u, recordar=False):
     session.clear()  # sesión nueva al entrar (evita reutilizar una anterior)
     session.permanent = True
+    session["recordar"] = recordar   # en su celular: no se cierra por inactividad (dura DIAS_RECORDAR días)
     session["id_usuario"] = u["id_usuario"]
     session["rol"] = u["rol"]
     session["ultima_actividad"] = time.time()
@@ -28,7 +29,7 @@ def cargar_usuario():
     id_usuario = session.get("id_usuario")
     if not id_usuario:
         return
-    if time.time() - session.get("ultima_actividad", 0) > MINUTOS_INACTIVIDAD * 60:
+    if not session.get("recordar") and time.time() - session.get("ultima_actividad", 0) > MINUTOS_INACTIVIDAD * 60:
         session.clear()
         flash(f"Tu sesión se cerró por {MINUTOS_INACTIVIDAD} minutos de inactividad.", "aviso")
         return

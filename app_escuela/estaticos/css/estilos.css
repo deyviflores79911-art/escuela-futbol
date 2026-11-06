@@ -485,6 +485,7 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 .fila-detalle { display: grid; gap: .6rem; padding: .6rem .8rem .8rem; border-top: 1px solid var(--borde); }
 .fila-detalle.botones { display: flex; flex-wrap: wrap; }
 .lista-filas > li.inactivo { opacity: .65; }
+.recordar { margin: 0 0 1rem; background: transparent; border: 0; padding: 0; }
 .mes-elegir { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .mes-elegir input { flex: 1 1 10rem; width: auto; }
 .cupo-pagina { margin: 0 0 1rem; }

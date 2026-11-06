@@ -264,6 +264,32 @@ document.querySelectorAll("[data-beca]").forEach(function (b) {
   setTimeout(function () { window.location.href = enlace.href; }, 700);
 })();
 
+// Búsqueda mientras se escribe: <form data-busqueda-vivo="#resultados">. Pide la misma página con lo escrito
+// y cambia solo los resultados (sin recargar ni tocar "Buscar"). Si falla, el botón Buscar sigue funcionando.
+document.querySelectorAll("form[data-busqueda-vivo]").forEach(function (form) {
+  var destino = form.getAttribute("data-busqueda-vivo"), espera = null, pedido = 0;
+  function buscar() {
+    var url = (form.getAttribute("action") || location.pathname) + "?" + new URLSearchParams(new FormData(form)).toString();
+    var numero = ++pedido;
+    fetch(url, { credentials: "same-origin" })
+      .then(function (r) { if (!r.ok || r.redirected) throw new Error("sin sesión"); return r.text(); })
+      .then(function (html) {
+        if (numero !== pedido) return;   // llegó tarde: ya se escribió otra cosa
+        var nuevo = new DOMParser().parseFromString(html, "text/html").querySelector(destino);
+        var actual = document.querySelector(destino);
+        if (nuevo && actual) actual.innerHTML = nuevo.innerHTML;
+        try { history.replaceState(null, "", url); } catch (e) {}
+      })
+      .catch(function () {});
+  }
+  form.addEventListener("input", function (e) {
+    if (e.target.type !== "search" && e.target.type !== "text") return;
+    clearTimeout(espera);
+    espera = setTimeout(buscar, 300);
+  });
+  form.addEventListener("change", function (e) { if (e.target.tagName === "SELECT") buscar(); });
+});
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {

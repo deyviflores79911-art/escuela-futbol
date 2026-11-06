@@ -5,13 +5,14 @@
 {% block contenido %}
 <h1>Cobrar</h1>
 {{ pestanas([('caja.caja', 'Cobrar'), ('caja.mensualidades', 'Mensualidades')]) }}
-<form class="tarjeta form-buscar" method="get" role="search">
+<form class="tarjeta form-buscar" method="get" role="search" data-busqueda-vivo="#resultados">
   <label for="q" class="solo-lector">Buscar alumno</label>
   <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" {% if not q %}autofocus{% endif %} enterkeyhint="search"
          placeholder="Nombre o código del alumno">
   <button class="boton">Buscar</button>
 </form>
 
+<div id="resultados" aria-live="polite">
 {% if q %}
   {% if encontrados %}
   {% set maximo = 20 %}
@@ -33,6 +34,7 @@
   {% endif %}
 {% endif %}
 
+</div>
 <section class="tarjeta">
   <h2>Últimos pagos registrados en la app</h2>
   {% if ultimos %}

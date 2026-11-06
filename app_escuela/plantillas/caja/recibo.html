@@ -16,6 +16,9 @@
   </form>
   {% endif %}
   {% endif %}
+  {% if siguiente and p.estado != 'Anulado' %}
+  <a class="boton boton-cobrar" href="{{ url_for('caja.cobrar', id_mensualidad=siguiente.id_mensualidad) }}">Cobrar el mes {{ siguiente.periodo }} · {{ siguiente.saldo|bs }}<small>todavía debe</small></a>
+  {% endif %}
   <button type="button" class="boton boton-claro" data-imprimir>Imprimir</button>
   <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a cobrar</a>
 </div>

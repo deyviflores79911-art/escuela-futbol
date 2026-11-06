@@ -12,7 +12,7 @@
   <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Nuevo alumno</a>
 </div>
 
-<form class="tarjeta filtros filtros-alumnos" method="get" role="search">
+<form class="tarjeta filtros filtros-alumnos" method="get" role="search" data-busqueda-vivo="#resultados">
   <div class="campo">
     <label for="q">Buscar</label>
     <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" autofocus
@@ -33,6 +33,7 @@
   </div>
 </form>
 
+<div id="resultados" aria-live="polite">
 {% if alumnos %}
 {% set mostrar = alumnos if todos else alumnos[:por_pagina] %}
 <p class="ayuda">{{ alumnos|length }} resultado{{ 's' if alumnos|length != 1 }}{% if alumnos|length >= maximo %} (se muestran los primeros {{ maximo }}; afina la búsqueda){% endif %}.</p>
@@ -59,4 +60,5 @@
   <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Registrar el primer alumno</a>
 </div>
 {% endif %}
+</div>
 {% endblock %}
