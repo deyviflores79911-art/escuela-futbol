@@ -38,6 +38,10 @@
   <p class="resumen-linea"><strong>{{ total|bs }}</strong> por cobrar · {{ deudores|length }} mensualidad{{ 'es' if deudores|length != 1 }} con saldo{{ ' en ' ~ categoria if categoria }} · {{ vencidas|length }} vencida{{ 's' if vencidas|length != 1 }}</p>
 
   {% if deudores %}
+  {% set con_wa = deudores|selectattr('wa')|list %}
+  {% if con_wa|length > 1 %}
+  <button type="button" class="boton boton-whatsapp" data-avisar-todos>{{ icono('whatsapp') }} Avisar a todos ({{ con_wa|length }})</button>
+  {% endif %}
   <ul class="lista-filas">
     {% for d in deudores %}
     <li class="fila-deudor" data-categoria="{{ d.categoria }}">
@@ -48,7 +52,7 @@
         <small>{{ d.tutor or 'Sin tutor' }}{{ ' · ' ~ d.contacto if d.contacto }}</small>
       </div>
       <div class="fila-acciones">
-        {% if d.wa %}<a class="boton boton-claro boton-icono" target="_blank" rel="noopener" aria-label="WhatsApp a {{ d.tutor }}"
+        {% if d.wa %}<a class="boton boton-claro boton-icono" data-aviso-wa data-nombre="{{ d.nombres }}" target="_blank" rel="noopener" aria-label="WhatsApp a {{ d.tutor }}"
            href="https://wa.me/{{ d.wa }}?text={{ ('Hola, le escribimos de la Escuela de Fútbol Fortaleza: la mensualidad ' ~ d.periodo ~ ' de ' ~ d.nombres ~ ' tiene un saldo pendiente de ' ~ d.adeudado|bs ~ '.')|urlencode }}">{{ icono('whatsapp') }}</a>{% endif %}
         <a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=d.id_mensualidad) }}">Cobrar</a>
       </div>

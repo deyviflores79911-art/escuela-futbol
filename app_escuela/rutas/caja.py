@@ -117,14 +117,19 @@ def cobrar(id_mensualidad):
         id_metodo = validar.opcion(form, "id_metodo_pago", errores, "el método de pago",
                                    {str(x["id_metodo_pago"]) for x in metodos})
         fecha = validar.fecha(form, "fecha_pago", errores, "La fecha de pago", maxima=date.today())
-        monto = validar.monto(form, "monto", errores, "El monto")
+        meses = _meses(form)
+        monto = validar.monto(form, "monto", errores, "El monto") if meses == 1 else None
         if not errores:
             try:
-                id_pago, recibo, estado = pagos.registrar_pago(
-                    id_mensualidad, int(id_metodo), fecha, monto, g.usuario["correo"],
-                    confirmar_exceso=form.get("confirmar_exceso") == "si")
-                tipo = "pago completo" if estado == "Confirmado" else "pago parcial"
-                flash(f"Pago registrado: recibo {recibo} ({tipo}).", "ok")
+                if meses > 1:
+                    id_pago, recibos = pagos.cobrar_meses(m["id_alumno"], meses, int(id_metodo), fecha, g.usuario["correo"])
+                    flash(f"Cobro de {meses} meses registrado: recibos {recibos[0]} a {recibos[-1]}.", "ok")
+                else:
+                    id_pago, recibo, estado = pagos.registrar_pago(
+                        id_mensualidad, int(id_metodo), fecha, monto, g.usuario["correo"],
+                        confirmar_exceso=form.get("confirmar_exceso") == "si")
+                    tipo = "pago completo" if estado == "Confirmado" else "pago parcial"
+                    flash(f"Pago registrado: recibo {recibo} ({tipo}).", "ok")
                 if form.get("enviar_correo") == "si" and correo.configurado():
                     _enviar_recibo_por_correo(pagos.obtener_pago(id_pago))
                 # WhatsApp: el recibo se abre con el mensaje listo; el dueño solo toca Enviar
@@ -143,10 +148,96 @@ def cobrar(id_mensualidad):
     if m["saldo"] <= 0 and request.method == "GET":
         flash("Esa mensualidad ya está pagada.", "aviso")
         return redirect(url_for("caja.cuenta", id_alumno=m["id_alumno"]))
-    return render_template("caja/cobrar.html", m=m, form=form, errores=errores,
+    opciones = pagos.opciones_de_meses(m["id_alumno"])
+    if opciones:
+        opciones[0]["total"] = m["saldo"]   # 1 mes: el que se abrió (se puede pagar una parte)
+    return render_template("caja/cobrar.html", m=m, form=form, errores=errores, opciones_meses=opciones,
                            metodos_opciones=[(x["id_metodo_pago"], x["nombre"]) for x in metodos],
                            pedir_confirmacion=pedir_confirmacion, clave_cobro=_nueva_clave_cobro(),
                            hoy=date.today().isoformat(), correo_listo=correo.configurado())
+
+
+def _meses(form):
+    try:
+        return min(max(int(form.get("meses") or 1), 1), pagos.MAX_MESES)
+    except ValueError:
+        return 1
+
+
+@bp.route("/caja/alumnos/<int:id_alumno>/adelantar", methods=["GET", "POST"])
+@solo_dueno
+def adelantar(id_alumno):
+    """Pagar por adelantado (no debe nada): se elige cuántos meses y se crean al cobrar."""
+    a = validar.existe_o_404(alumnos.obtener_alumno(id_alumno))
+    plan = pagos.plan_de_meses(id_alumno, 6)
+    if plan and plan[0]["id_mensualidad"]:   # si debe algo, se cobra desde lo que debe
+        return redirect(url_for("caja.cobrar", id_mensualidad=plan[0]["id_mensualidad"]))
+    if not plan:
+        flash(f"{a['nombres']} no está inscrito en un grupo (o tiene beca completa): no hay meses para adelantar.", "aviso")
+        return redirect(url_for("caja.cuenta", id_alumno=id_alumno))
+    metodos = pagos.metodos_activos()
+    errores = validar.Errores()
+    if request.method == "POST":
+        form = request.form
+        if not _usar_clave_cobro(form.get("clave_cobro")):
+            flash("Ese cobro ya se había enviado (doble clic o recarga). No se registró otra vez.", "aviso")
+            return redirect(url_for("caja.cuenta", id_alumno=id_alumno))
+        id_metodo = validar.opcion(form, "id_metodo_pago", errores, "el método de pago",
+                                   {str(x["id_metodo_pago"]) for x in metodos})
+        fecha = validar.fecha(form, "fecha_pago", errores, "La fecha de pago", maxima=date.today())
+        if not errores:
+            try:
+                meses = _meses(form)
+                id_pago, recibos = pagos.cobrar_meses(id_alumno, meses, int(id_metodo), fecha, g.usuario["correo"])
+                flash(f"Pago adelantado de {meses} mes{'es' if meses != 1 else ''}: recibo{'s' if meses != 1 else ''} "
+                      f"{recibos[0]}{' a ' + recibos[-1] if meses > 1 else ''}.", "ok")
+                if form.get("enviar_correo") == "si" and correo.configurado():
+                    _enviar_recibo_por_correo(pagos.obtener_pago(id_pago))
+                return redirect(url_for("caja.recibo", id_pago=id_pago,
+                                        whatsapp=1 if form.get("enviar_whatsapp") == "si" else None))
+            except ErrorDatos as e:
+                flash(str(e), "error")
+    else:
+        form = {"fecha_pago": date.today().isoformat(), "id_metodo_pago": pagos.metodo_sugerido(id_alumno),
+                "enviar_whatsapp": "si" if (a["tutor_whatsapp"] or a["tutor_telefono"]) else "",
+                "enviar_correo": "si" if a.get("tutor_correo") and correo.configurado() else ""}
+    x = plan[0]
+    m = {"id_alumno": id_alumno, "nombres": a["nombres"], "apellidos": a["apellidos"], "periodo": x["periodo"],
+         "grupo": a["grupos"], "fecha_vencimiento": x["vence"], "porcentaje_beca": a["porcentaje_beca"],
+         "saldo": x["saldo"], "pagado": 0, "monto": x["saldo"],
+         "tutor_celular": a["tutor_whatsapp"] or a["tutor_telefono"], "tutor_correo": a.get("tutor_correo")}
+    form = dict(form)
+    form.setdefault("monto", f"{x['saldo']:.2f}")
+    return render_template("caja/cobrar.html", m=m, form=form, errores=errores, adelantar=True,
+                           opciones_meses=pagos.opciones_de_meses(id_alumno),
+                           metodos_opciones=[(x["id_metodo_pago"], x["nombre"]) for x in metodos],
+                           pedir_confirmacion=False, clave_cobro=_nueva_clave_cobro(),
+                           hoy=date.today().isoformat(), correo_listo=correo.configurado())
+
+
+@bp.route("/caja/mensualidades/<int:id_mensualidad>/no-vino", methods=["POST"])
+@solo_dueno
+def no_vino(id_mensualidad):
+    try:
+        id_alumno, periodo = pagos.marcar_no_vino(id_mensualidad)
+        flash(f"Mes {periodo}: no vino, no se cobra.", "ok")
+        return redirect(url_for("caja.cuenta", id_alumno=id_alumno))
+    except ErrorDatos as e:
+        flash(str(e), "error")
+        m = pagos.obtener_mensualidad(id_mensualidad)
+        return redirect(url_for("caja.cuenta", id_alumno=m["id_alumno"]) if m else url_for("caja.caja"))
+
+
+@bp.route("/caja/mensualidades/<int:id_mensualidad>/cobrar-igual", methods=["POST"])
+@solo_dueno
+def cobrar_igual(id_mensualidad):
+    try:
+        id_alumno = pagos.volver_a_cobrar(id_mensualidad)
+        flash("Ese mes se vuelve a cobrar.", "ok")
+        return redirect(url_for("caja.cuenta", id_alumno=id_alumno))
+    except ErrorDatos as e:
+        flash(str(e), "error")
+        return redirect(url_for("caja.caja"))
 
 
 # ---------------------------------------------------------------- Recibo y anulación (RF-15, RF-16, HU-09, HU-10)
@@ -191,8 +282,15 @@ def enviar_correo(id_pago):
 @solo_dueno
 def anular(id_pago):
     try:
+        p = pagos.obtener_pago(id_pago)
+        otros = [x["id_pago"] for x in (p["juntos"] if p else []) if x["id_pago"] != id_pago]
         recibo_anulado = pagos.anular_pago(id_pago, request.form.get("motivo"), g.usuario["correo"])
-        flash(f"Pago {recibo_anulado} anulado. Queda en el historial y la mensualidad vuelve a tener saldo.", "ok")
+        for otro in otros:
+            pagos.anular_pago(otro, request.form.get("motivo"), g.usuario["correo"])
+        if otros:
+            flash(f"Cobro de {len(otros) + 1} meses anulado. Queda en el historial y esos meses vuelven a tener saldo.", "ok")
+        else:
+            flash(f"Pago {recibo_anulado} anulado. Queda en el historial y la mensualidad vuelve a tener saldo.", "ok")
     except ErrorDatos as e:
         flash(str(e), "error")
     return redirect(url_for("caja.recibo", id_pago=id_pago))

@@ -40,7 +40,7 @@
       </div>
     </div>
     <dl class="recibo-numero">
-      <dt>Recibo N.º</dt><dd><strong>{{ p.numero_recibo }}</strong></dd>
+      <dt>Recibo N.º</dt><dd><strong>{{ p.lineas[0].numero_recibo }}{{ ' a ' ~ p.lineas[-1].numero_recibo if p.juntos }}</strong></dd>
       <dt>Fecha</dt><dd>{{ p.fecha_pago|fecha }}</dd>
       <dt>Cód. cliente</dt><dd>{{ p.codigo }}</dd>
     </dl>
@@ -65,33 +65,33 @@
         <th class="col-opcional">Código</th><th>Cant.</th><th class="col-opcional">Unidad</th><th>Descripción</th>
         <th class="num">Precio unit.</th><th class="num col-opcional">Descuento</th><th class="num">Subtotal</th>
       </tr></thead>
-      <tbody><tr>
-        <td class="col-opcional">M-{{ p.periodo }}</td>
+      <tbody>{% for l in p.lineas %}<tr>
+        <td class="col-opcional">M-{{ l.periodo }}</td>
         <td>1</td>
         <td class="col-opcional">Mes</td>
-        <td>Mensualidad {{ p.periodo }} · {{ p.grupo }}{% if p.monto != p.monto_mensualidad %}<br><span class="ayuda">Abono a la mensualidad de {{ p.monto_mensualidad|bs }}</span>{% endif %}</td>
-        <td class="num">{{ p.monto|coma }}</td>
+        <td>Mensualidad {{ l.periodo }} · {{ l.grupo }}{% if l.monto != l.monto_mensualidad %}<br><span class="ayuda">Abono a la mensualidad de {{ l.monto_mensualidad|bs }}</span>{% endif %}</td>
+        <td class="num">{{ l.monto|coma }}</td>
         <td class="num col-opcional">0,00</td>
-        <td class="num">{{ p.monto|coma }}</td>
-      </tr></tbody>
+        <td class="num">{{ l.monto|coma }}</td>
+      </tr>{% endfor %}</tbody>
     </table>
   </div>
 
   <div class="recibo-pie-tabla">
-    <p class="recibo-letras"><strong>Son: {{ p.monto|letras }}</strong></p>
+    <p class="recibo-letras"><strong>Son: {{ p.total|letras }}</strong></p>
     <table class="recibo-totales">
-      <tr><th>Subtotal Bs</th><td>{{ p.monto|coma }}</td></tr>
+      <tr><th>Subtotal Bs</th><td>{{ p.total|coma }}</td></tr>
       <tr><th>Descuento Bs</th><td>0,00</td></tr>
-      <tr><th>Total Bs</th><td>{{ p.monto|coma }}</td></tr>
-      <tr class="recibo-a-pagar"><th>Monto pagado Bs</th><td>{{ p.monto|coma }}</td></tr>
+      <tr><th>Total Bs</th><td>{{ p.total|coma }}</td></tr>
+      <tr class="recibo-a-pagar"><th>Monto pagado Bs</th><td>{{ p.total|coma }}</td></tr>
     </table>
   </div>
 
   <dl class="recibo-extra">
     <dt>Método de pago</dt><dd>{{ p.metodo }}</dd>
     <dt>Estado</dt><dd>{{ p.estado }}{{ ' (pago parcial)' if p.estado == 'Parcial' }}</dd>
-    <dt>Mensualidad</dt><dd>{{ p.monto_mensualidad|bs }} ·
-      {% if p.saldo_mensualidad > 0 %}saldo pendiente {{ p.saldo_mensualidad|bs }}{% else %}cubierta{% endif %}</dd>
+    {% if not p.juntos %}<dt>Mensualidad</dt><dd>{{ p.monto_mensualidad|bs }} ·
+      {% if p.saldo_mensualidad > 0 %}saldo pendiente {{ p.saldo_mensualidad|bs }}{% else %}cubierta{% endif %}</dd>{% endif %}
     {% if p.observaciones %}<dt>Observaciones</dt><dd>{{ p.observaciones }}</dd>{% endif %}
   </dl>
 
@@ -107,7 +107,7 @@
   <h2>Anular este pago</h2>
   <p class="ayuda">Úsalo si el pago se registró por error. No se borra: queda como Anulado, con el motivo, y la mensualidad vuelve a tener saldo.</p>
   <form method="post" action="{{ url_for('caja.anular', id_pago=p.id_pago) }}"
-        data-confirmar="¿Anular el pago {{ p.numero_recibo }} de {{ p.monto|bs }}? No se puede deshacer.">
+        data-confirmar="¿Anular {{ ('el cobro de ' ~ p.lineas|length ~ ' meses') if p.juntos else ('el pago ' ~ p.numero_recibo) }} de {{ p.total|bs }}? No se puede deshacer.">
     {{ csrf() }}
     <div class="campo">
       <label for="motivo">Motivo de la anulación <span class="obligatorio" aria-hidden="true">*</span></label>

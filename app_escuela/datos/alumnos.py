@@ -4,6 +4,7 @@ El código del alumno y el CI del tutor no se repiten (la base no lo obliga: lo 
 Una baja cambia el estado de la inscripción a BAJA; nunca se borra el historial.
 """
 import re
+from datetime import date, timedelta
 
 from datos.bd import ErrorDatos, consultar, consultar_uno, transaccion
 from datos.catalogos import edad, listar_grupos, mensaje_edad
@@ -93,7 +94,7 @@ _SELECT_ALUMNO = """
     SELECT a.id_alumno, a.codigo, a.nombres, a.apellidos, a.fecha_nacimiento, a.sexo, a.direccion,
            a.estado, a.fecha_registro, a.id_tutor, a.porcentaje_beca,
            t.nombres AS tutor_nombres, t.apellidos AS tutor_apellidos, t.ci AS tutor_ci,
-           t.telefono AS tutor_telefono, t.whatsapp AS tutor_whatsapp,
+           t.telefono AS tutor_telefono, t.whatsapp AS tutor_whatsapp, t.correo AS tutor_correo,
            (SELECT STRING_AGG(g.nombre, ', ') FROM INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo
              WHERE i.id_alumno = a.id_alumno AND i.estado = 'ACTIVA') AS grupos
     FROM ALUMNO a
@@ -232,7 +233,7 @@ def cambiar_beca(id_alumno, porcentaje, aplicar_desde=None):
                        FROM MENSUALIDAD m
                        JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
                        JOIN GRUPO g ON g.id_grupo = i.id_grupo
-                       WHERE i.id_alumno = ? AND m.periodo >= ?
+                       WHERE i.id_alumno = ? AND m.periodo >= ? AND m.estado <> 'NO VINO'
                          AND NOT EXISTS (SELECT 1 FROM PAGO p JOIN ESTADO_PAGO e ON e.id_estado_pago = p.id_estado_pago
                                          WHERE p.id_mensualidad = m.id_mensualidad AND e.nombre <> 'Anulado')""",
                     (porcentaje, id_alumno, aplicar_desde))
@@ -273,6 +274,51 @@ def grupo_para_edad(fecha_nacimiento, hoy=None):
         return None, f"tiene {anios} años y {llenos} {'están llenos' if len(de_su_edad) > 1 else 'está lleno'}"
     return None, f"tiene {anios} años y no hay ningún grupo activo de su edad"
 
+
+
+_edades_listas = None   # último día en que se revisaron las edades (en este proceso)
+
+
+def mover_por_edad(hoy=None):
+    """
+    Regla de la escuela: cada niño entrena en el grupo de su edad. El que cumplió años y quedó fuera
+    pasa solo a un grupo de su nueva edad con cupo (una vez por día). Devuelve cuántos se movieron.
+    """
+    global _edades_listas
+    from datos.reportes import fuera_de_categoria
+    hoy = hoy or date.today()
+    if _edades_listas == hoy:
+        return 0
+    movidos = 0
+    for f in fuera_de_categoria(hoy):
+        nacimiento = consultar_uno("SELECT fecha_nacimiento FROM ALUMNO WHERE id_alumno = ?", (f["id_alumno"],))
+        grupo, _ = grupo_para_edad(nacimiento["fecha_nacimiento"], hoy)
+        if not grupo:
+            continue   # sin grupo de su edad con cupo: queda el aviso en la campana
+        try:
+            with transaccion() as cur:
+                cur.execute("UPDATE INSCRIPCION SET estado = 'BAJA' WHERE id_alumno = ? AND id_grupo = ? AND estado = 'ACTIVA'",
+                            (f["id_alumno"], f["id_grupo"]))
+                _inscribir(cur, f["id_alumno"], grupo["id_grupo"], hoy)
+            movidos += 1
+        except ErrorDatos:
+            pass
+    _edades_listas = hoy
+    return movidos
+
+
+def cambios_de_grupo(dias=7, hoy=None, id_entrenador=None):
+    """Alumnos que en los últimos días pasaron a otro grupo (por edad o a mano): para avisar en la campana."""
+    hoy = hoy or date.today()
+    return consultar(f"""SELECT a.id_alumno, a.nombres + ' ' + ISNULL(a.apellidos, '') AS alumno, g.nombre AS grupo,
+               (SELECT TOP 1 g2.nombre FROM INSCRIPCION i2 JOIN GRUPO g2 ON g2.id_grupo = i2.id_grupo
+                WHERE i2.id_alumno = a.id_alumno AND i2.estado = 'BAJA' AND i2.id_inscripcion < i.id_inscripcion
+                ORDER BY i2.id_inscripcion DESC) AS antes
+        FROM INSCRIPCION i JOIN ALUMNO a ON a.id_alumno = i.id_alumno JOIN GRUPO g ON g.id_grupo = i.id_grupo
+        WHERE i.estado = 'ACTIVA' AND i.fecha_inscripcion >= ? {'AND g.id_entrenador = ?' if id_entrenador else ''}
+          AND EXISTS (SELECT 1 FROM INSCRIPCION i2 WHERE i2.id_alumno = a.id_alumno AND i2.estado = 'BAJA'
+                      AND i2.id_inscripcion < i.id_inscripcion AND i2.id_grupo <> i.id_grupo)
+        ORDER BY a.nombres""", (hoy - timedelta(days=dias),) + ((id_entrenador,) if id_entrenador else ()))
 
 
 def grupos_para_inscribir(id_alumno):

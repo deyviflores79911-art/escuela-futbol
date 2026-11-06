@@ -1,6 +1,7 @@
 {{ escuela.nombre }}
-RECIBO {{ p.numero_recibo }} · {{ p.fecha_pago|fecha }}
+RECIBO {{ p.lineas[0].numero_recibo }}{{ ' a ' ~ p.lineas[-1].numero_recibo if p.juntos }} · {{ p.fecha_pago|fecha }}
 Alumno: {{ p.nombres }} {{ p.apellidos or '' }} ({{ p.grupo }})
-Mensualidad {{ p.periodo }}: pagó {{ p.monto|bs }} ({{ p.metodo }})
+{% if p.juntos %}Mensualidades {{ p.lineas|map(attribute='periodo')|join(', ') }}: pagó {{ p.total|bs }} ({{ p.metodo }})
+{% else %}Mensualidad {{ p.periodo }}: pagó {{ p.monto|bs }} ({{ p.metodo }})
 {% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: {{ p.saldo_mensualidad|bs }}{% else %}Mensualidad pagada completa{% endif %}
-¡Gracias!
+{% endif %}¡Gracias!

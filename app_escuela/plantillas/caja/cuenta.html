@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_campos.html" import csrf %}
 {% from "_iconos.html" import icono %}
 {% block titulo %}Cuenta de {{ a.nombres }}{% endblock %}
 {% block contenido %}
@@ -15,13 +16,22 @@
     <p class="monto-grande">{{ saldo_total|bs }}</p>
     <a class="boton boton-cobrar ancho" href="{{ url_for('caja.cobrar', id_mensualidad=primera.id_mensualidad) }}">
       Cobrar {{ primera.saldo|bs }}<small>mes {{ primera.periodo }}{{ ' · vencida hace ' ~ primera.dias_atraso ~ ' días' if primera.estado == 'Vencida' }}</small></a>
+    {% if primera.pagado == 0 %}
+    <form method="post" action="{{ url_for('caja.no_vino', id_mensualidad=primera.id_mensualidad) }}" class="en-linea"
+          data-confirmar="¿{{ a.nombres }} no vino en {{ primera.periodo }}? Ese mes no se cobra.">
+      {{ csrf() }}<button class="boton boton-claro boton-chico">No vino en {{ primera.periodo }}</button>
+    </form>
+    {% endif %}
     {% if deudas|length > 1 %}
     <ul class="lista-filas">
       {% for m in deudas[1:] %}
       <li>
         <div class="fila-principal"><strong>{{ m.periodo }} · {{ m.saldo|bs }}</strong>
           <small>{{ m.grupo }} · vence {{ m.fecha_vencimiento|fecha }}{{ ' · ' ~ m.dias_atraso ~ ' días de atraso' if m.estado == 'Vencida' }}</small></div>
-        <div class="fila-acciones"><a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=m.id_mensualidad) }}">Cobrar</a></div>
+        <div class="fila-acciones">
+          {% if m.pagado == 0 %}<form method="post" action="{{ url_for('caja.no_vino', id_mensualidad=m.id_mensualidad) }}" class="en-linea"
+                data-confirmar="¿{{ a.nombres }} no vino en {{ m.periodo }}? Ese mes no se cobra.">{{ csrf() }}<button class="boton boton-claro boton-chico">No vino</button></form>{% endif %}
+          <a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=m.id_mensualidad) }}">Cobrar</a></div>
       </li>
       {% endfor %}
     </ul>
@@ -30,8 +40,8 @@
 {% else %}
   <section class="tarjeta cobro-principal al-dia">
     <p class="monto-grande">{{ icono('check') }} Al día</p>
-    <p class="ayuda">{{ 'No debe ninguna mensualidad.' if pagadas else 'Todavía no tiene mensualidades.' }}
-      {% if not pagadas %}Genéralas en <a href="{{ url_for('caja.mensualidades') }}">Mensualidades</a>.{% endif %}</p>
+    <p class="ayuda">{{ 'No debe ninguna mensualidad.' if pagadas else 'Todavía no tiene mensualidades.' }}</p>
+    <a class="boton boton-claro" href="{{ url_for('caja.adelantar', id_alumno=a.id_alumno) }}">Pagar adelantado</a>
   </section>
 {% endif %}
 
@@ -42,12 +52,19 @@
 {# El historial queda plegado: se abre solo si hace falta #}
 {% if pagadas %}
 <details class="tarjeta plegable">
-  <summary>Mensualidades pagadas ({{ pagadas|length }})</summary>
+  <summary>Meses pagados ({{ pagadas|length }})</summary>
   <ul class="lista-filas">
     {% for m in pagadas %}
     <li>
+      {% if m.estado == 'No vino' %}
+      <div class="fila-principal"><strong>{{ m.periodo }}</strong><small>{{ m.grupo }} · no se cobra</small></div>
+      <div class="fila-acciones"><span class="estado">No vino</span>
+        <form method="post" action="{{ url_for('caja.cobrar_igual', id_mensualidad=m.id_mensualidad) }}" class="en-linea">
+          {{ csrf() }}<button class="boton boton-claro boton-chico">Cobrar igual</button></form></div>
+      {% else %}
       <div class="fila-principal"><strong>{{ m.periodo }}</strong><small>{{ m.grupo }} · {{ m.monto|bs }}</small></div>
       <div class="fila-acciones"><span class="estado estado-ok">{{ icono('check') }} Pagada</span></div>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>

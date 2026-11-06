@@ -6,7 +6,7 @@ Cada una tiene un id; el número de la campana cuenta las que la persona todaví
 import hashlib
 from datetime import date
 
-from datos import pagos, reportes
+from datos import alumnos, reportes
 from datos.alumnos import numero_whatsapp
 from datos.bd import consultar
 from datos.catalogos import listar_grupos
@@ -91,6 +91,16 @@ def notificaciones(es_dueno, id_entrenador=None, hoy=None):
                                   + ("…" if len(fuera) > 6 else ""),
                        "enlace": "alumnos.lista" if es_dueno else "reportes.mi_grupo",
                        "texto_enlace": "Ver alumnos" if es_dueno else "Ver mi grupo", "nivel": "error"})
+
+    cambios = alumnos.cambios_de_grupo(hoy=hoy, id_entrenador=None if es_dueno else id_entrenador)
+    if cambios and (es_dueno or id_entrenador):
+        avisos.append({"id": f"cambio:{_huella(c['id_alumno'] for c in cambios)}", "icono": "personas",
+                       "titulo": f"Cambio{'s' if len(cambios) != 1 else ''} de grupo por edad",
+                       "detalle": ", ".join(c["alumno"] for c in cambios),
+                       "filas": [{"titulo": c["alumno"], "detalle": f"{c['antes']} → {c['grupo']}" if c["antes"] else c["grupo"]}
+                                 for c in cambios],
+                       "enlace": "alumnos.lista" if es_dueno else "reportes.mi_grupo",
+                       "texto_enlace": "Ver alumnos" if es_dueno else "Ver mi grupo", "nivel": "info"})
 
     if not es_dueno and id_entrenador:
         pronto = [a for gr in reportes.mi_grupo(id_entrenador, hoy) for a in gr["alumnos"]

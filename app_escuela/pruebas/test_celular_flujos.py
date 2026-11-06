@@ -181,17 +181,26 @@ class PruebasPantallasCompactas(PruebaConBaseQueSeDeshace):
 
     def test_al_inscribir_ya_tiene_su_mensualidad_y_boton_cobrar(self):
         from datos import alumnos, pagos
-        a = consultar_uno("""SELECT TOP 1 a.id_alumno FROM ALUMNO a WHERE a.estado = 'ACTIVO' AND a.porcentaje_beca < 100
-            AND NOT EXISTS (SELECT 1 FROM INSCRIPCION i WHERE i.id_alumno = a.id_alumno AND i.estado = 'ACTIVA')""")
-        if not a:
-            self.skipTest("No hay alumnos sin grupo.")
-        grupo = alumnos.grupo_para_edad(consultar_uno("SELECT fecha_nacimiento FROM ALUMNO WHERE id_alumno = ?",
-                                                       (a["id_alumno"],))["fecha_nacimiento"])
+        a = consultar_uno("""SELECT TOP 1 a.id_alumno, a.fecha_nacimiento FROM ALUMNO a WHERE a.estado = 'ACTIVO'
+            AND a.porcentaje_beca < 100 ORDER BY a.id_alumno""")
+        with bd.transaccion() as cur:   # queda sin grupo y sin deudas (se deshace al final)
+            cur.execute("UPDATE INSCRIPCION SET estado = 'BAJA' WHERE id_alumno = ?", (a["id_alumno"],))
+            cur.execute("""DELETE m FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                WHERE i.id_alumno = ? AND NOT EXISTS (SELECT 1 FROM PAGO p WHERE p.id_mensualidad = m.id_mensualidad)""",
+                        (a["id_alumno"],))
+            cur.execute("UPDATE GRUPO SET cupo_maximo = cupo_maximo + 50")
+        grupo, _ = alumnos.grupo_para_edad(a["fecha_nacimiento"])
         if not grupo:
-            self.skipTest("No hay grupo con cupo para esa edad.")
+            self.skipTest("No hay grupo de su edad.")
+        if consultar_uno("""SELECT 1 AS x FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                            WHERE i.id_alumno = ? AND m.periodo = ?""", (a["id_alumno"], pagos.periodo_actual())):
+            self.skipTest("Ya pagó este mes.")
+        ya = pagos.primera_con_saldo([a["id_alumno"]]).get(a["id_alumno"])
         alumnos.inscribir(a["id_alumno"], grupo["id_grupo"], date.today())
         m = pagos.primera_con_saldo([a["id_alumno"]]).get(a["id_alumno"])
         self.assertIsNotNone(m, "la mensualidad del mes se crea al inscribir")
+        if not ya:
+            self.assertEqual(m["periodo"], pagos.periodo_actual())
         html = self.dueno.get(f"/alumnos/{a['id_alumno']}").get_data(as_text=True)
         self.assertIn(f"/caja/mensualidades/{m['id_mensualidad']}/cobrar", html)
 

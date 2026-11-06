@@ -765,3 +765,7 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 }
 /* Al saltar a un campo, que no quede tapado por la barra de arriba ni por "Guardar" */
 input, select, textarea { scroll-margin: 96px 0 140px; }
+
+/* Deudores: los ya avisados quedan marcados */
+[data-aviso-wa].enviado { opacity: .45; }
+[data-avisar-todos] { width: 100%; margin: 0 0 .75rem; }

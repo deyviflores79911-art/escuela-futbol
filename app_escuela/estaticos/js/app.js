@@ -359,6 +359,41 @@ document.querySelectorAll("form[data-busqueda-vivo]").forEach(function (form) {
   });
 })();
 
+// Cobrar varios meses: el monto es el total de los meses elegidos (y no se cambia a mano)
+(function () {
+  var grupo = document.querySelector("[data-elegir-meses]");
+  if (!grupo) return;
+  var monto = document.getElementById("monto"), texto = document.querySelector("[data-periodos-elegidos]");
+  var soloLectura = monto && monto.readOnly;
+  function poner() {
+    var e = grupo.querySelector("input:checked");
+    if (!e || !monto) return;
+    var varios = e.value !== "1";
+    monto.value = e.getAttribute("data-total");
+    monto.readOnly = soloLectura || varios;
+    if (texto) texto.textContent = varios ? "Meses: " + e.getAttribute("data-periodos") : "";
+  }
+  grupo.addEventListener("change", poner);
+  poner();
+})();
+
+// Deudores: "Avisar a todos" abre los WhatsApp uno tras otro (cada toque, el siguiente)
+(function () {
+  var boton = document.querySelector("[data-avisar-todos]");
+  if (!boton) return;
+  var i = 0;
+  boton.addEventListener("click", function () {
+    var enlaces = document.querySelectorAll("[data-aviso-wa]");
+    if (i >= enlaces.length) { i = 0; enlaces.forEach(function (a) { a.classList.remove("enviado"); }); }
+    var a = enlaces[i++];
+    window.open(a.href, "_blank", "noopener");
+    a.classList.add("enviado");
+    boton.lastChild.textContent = i < enlaces.length
+      ? " Siguiente: " + enlaces[i].getAttribute("data-nombre") + " (" + (i + 1) + " de " + enlaces.length + ")"
+      : " Listo: se avisó a todos";
+  });
+})();
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {

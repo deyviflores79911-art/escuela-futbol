@@ -4,7 +4,7 @@
 {% block contenido %}
 <p class="miga"><a href="{{ url_for('caja.cuenta', id_alumno=m.id_alumno) }}">← Cuenta de {{ m.nombres }}</a></p>
 <section class="tarjeta tarjeta-media">
-  <h1>Cobrar</h1>
+  <h1>{{ 'Pagar adelantado' if adelantar else 'Cobrar' }}</h1>
   {# Lo justo para saber qué se cobra, en pocas líneas: los campos quedan a la vista #}
   <div class="resumen-cobro">
     <strong>{{ m.nombres }} {{ m.apellidos or '' }}</strong>
@@ -15,6 +15,18 @@
   <form method="post" class="form-cobro" data-un-solo-envio>
     {{ csrf() }}
     <input type="hidden" name="clave_cobro" value="{{ clave_cobro }}">
+    {% if opciones_meses|length > 1 %}
+    <div class="campo">
+      <span class="etiqueta" id="etiqueta-meses">{{ 'Meses por adelantado' if adelantar else 'Meses' }}</span>
+      <div class="opciones-metodo" role="radiogroup" aria-labelledby="etiqueta-meses" data-elegir-meses>
+        {% for o in opciones_meses %}
+        <label class="opcion-chip"><input type="radio" name="meses" value="{{ o.n }}" data-total="{{ '%.2f'|format(o.total) }}"
+               data-periodos="{{ o.periodos }}" {% if form.get('meses', '1')|string == o.n|string %}checked{% endif %}> {{ o.n }}</label>
+        {% endfor %}
+      </div>
+      <p class="ayuda" data-periodos-elegidos></p>
+    </div>
+    {% endif %}
     <div class="campo">
       <span class="etiqueta" id="etiqueta-metodo">¿Cómo paga? <span class="obligatorio" aria-hidden="true">*</span></span>
       <div class="opciones-metodo" role="radiogroup" aria-labelledby="etiqueta-metodo">
@@ -26,7 +38,7 @@
       {% if errores.id_metodo_pago %}<p class="error-campo">{{ errores.id_metodo_pago }}</p>{% endif %}
     </div>
     <div class="dos-columnas">
-      {{ campo('monto', 'Monto (Bs)', form.get('monto'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"') }}
+      {{ campo('monto', 'Monto (Bs)', form.get('monto'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"' ~ (' readonly' if adelantar else '')) }}
       {{ campo('fecha_pago', 'Fecha de pago', form.get('fecha_pago'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy ~ '"') }}
     </div>
     <div class="campo">

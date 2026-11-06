@@ -33,6 +33,11 @@ def fechas_propuestas(periodo):
     return date(anio, mes, DIA_EMISION), date(anio, mes, DIA_VENCIMIENTO)
 
 
+def siguiente_periodo(periodo):
+    anio, mes = map(int, periodo.split("-"))
+    return f"{anio + 1:04d}-01" if mes == 12 else f"{anio:04d}-{mes + 1:02d}"
+
+
 def periodo_actual():
     return date.today().strftime("%Y-%m")
 
@@ -100,8 +105,10 @@ def generar_mensualidades(periodo, fecha_emision, fecha_vencimiento):
                JOIN ALUMNO a ON a.id_alumno = i.id_alumno   -- beca: descuento en %; con 100 % no paga
                WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO' AND a.porcentaje_beca < 100
                  AND NOT EXISTS (SELECT 1 FROM MENSUALIDAD m WITH (UPDLOCK, HOLDLOCK)
-                                 WHERE m.id_inscripcion = i.id_inscripcion AND m.periodo = ?)""",
-            (periodo, fecha_emision, fecha_vencimiento, periodo))
+                                 WHERE m.id_inscripcion = i.id_inscripcion AND m.periodo = ?)
+                 AND NOT EXISTS (SELECT 1 FROM MENSUALIDAD m JOIN INSCRIPCION i2 ON i2.id_inscripcion = m.id_inscripcion
+                                 WHERE i2.id_alumno = i.id_alumno AND i2.estado = 'BAJA' AND m.periodo = ?)""",
+            (periodo, fecha_emision, fecha_vencimiento, periodo, periodo))
         return cur.rowcount, omitidas
 
 
@@ -118,6 +125,126 @@ def asegurar_mes_actual(hoy=None):
     creadas, _ = generar_mensualidades(periodo, *fechas_propuestas(periodo))
     _mes_listo = hoy
     return creadas
+
+
+# ---------------------------------------------------------------- Varios meses juntos / adelantado / no vino
+
+NO_VINO = "NO VINO"   # MENSUALIDAD.estado de un mes que no se cobra (monto 0)
+MAX_MESES = 12
+
+
+def _plan(cur, id_alumno, n):
+    """Los n meses que se cobran juntos: primero los que debe (del más antiguo) y después, adelantados, los que vienen."""
+    cur.execute(f"""SELECT m.id_mensualidad, m.periodo, m.monto - {PAGADO_SQL} AS saldo, m.fecha_vencimiento
+                    FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                    WHERE i.id_alumno = ? AND m.monto > {PAGADO_SQL}
+                    ORDER BY m.periodo, m.fecha_vencimiento""", (id_alumno,))
+    plan = [{"id_mensualidad": f[0], "periodo": f[1], "saldo": f[2], "vence": f[3]} for f in cur.fetchall()][:n]
+    if len(plan) < n:
+        cur.execute("""SELECT TOP 1 i.id_inscripcion, ROUND(g.precio_mensual * (100 - a.porcentaje_beca) / 100, 2)
+                       FROM INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo JOIN ALUMNO a ON a.id_alumno = i.id_alumno
+                       WHERE i.id_alumno = ? AND i.estado = 'ACTIVA' AND g.estado = 'ACTIVO' AND a.estado = 'ACTIVO'
+                         AND a.porcentaje_beca < 100
+                       ORDER BY i.id_inscripcion""", (id_alumno,))
+        ins = cur.fetchone()
+        if ins and ins[1] > 0:
+            cur.execute("SELECT MAX(m.periodo) FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion "
+                        "WHERE i.id_alumno = ?", (id_alumno,))
+            ultimo = cur.fetchone()[0]
+            p = max(siguiente_periodo(ultimo), periodo_actual()) if ultimo else periodo_actual()
+            while len(plan) < n:
+                emision, vence = fechas_propuestas(p)
+                plan.append({"id_mensualidad": None, "periodo": p, "saldo": ins[1], "vence": vence,
+                             "emision": emision, "id_inscripcion": ins[0]})
+                p = siguiente_periodo(p)
+    return plan
+
+
+def plan_de_meses(id_alumno, n=6):
+    with transaccion() as cur:
+        return _plan(cur, id_alumno, n)
+
+
+def opciones_de_meses(id_alumno):
+    """Para elegir en Cobrar: 1, 2, 3 o 6 meses (y los que debe, si son otra cantidad), con el total de cada opción."""
+    plan = plan_de_meses(id_alumno, 6)
+    deben = sum(1 for x in plan if x["id_mensualidad"])
+    cantidades = sorted({c for c in (1, 2, 3, 6, deben) if 1 <= c <= len(plan)})
+    return [{"n": c, "total": sum(x["saldo"] for x in plan[:c]),
+             "periodos": ", ".join(x["periodo"] for x in plan[:c])} for c in cantidades]
+
+
+def cobrar_meses(id_alumno, n, id_metodo, fecha_pago, usuario):
+    """
+    Cobra n meses completos de una vez (los que debe y, si alcanza, adelantados) en UNA transacción.
+    Un pago por mes, todos con la misma observación: el recibo los muestra juntos. Devuelve (id_pago, recibos).
+    """
+    if not 1 <= n <= MAX_MESES:
+        raise ErrorDatos(f"Se pueden cobrar de 1 a {MAX_MESES} meses.")
+    if fecha_pago > date.today():
+        raise ErrorDatos("La fecha de pago no puede ser futura.")
+    with transaccion() as cur:
+        cur.execute("SELECT COUNT(*) FROM MENSUALIDAD m WITH (UPDLOCK, HOLDLOCK) "
+                    "JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion WHERE i.id_alumno = ?", (id_alumno,))
+        cur.fetchone()
+        plan = _plan(cur, id_alumno, n)
+        if len(plan) < n:
+            raise ErrorDatos(f"Solo hay {len(plan)} mes{'es' if len(plan) != 1 else ''} para cobrar "
+                             "(para adelantar, el alumno tiene que estar inscrito en un grupo).")
+        cur.execute("SELECT 1 FROM METODO_PAGO WHERE id_metodo_pago = ? AND estado = 'ACTIVO'", (id_metodo,))
+        if not cur.fetchone():
+            raise ErrorDatos("Elige un método de pago válido.")
+        cur.execute("SELECT id_usuario FROM USUARIO WHERE LOWER(correo) = LOWER(?)", (usuario,))
+        quien = cur.fetchone()
+        if not quien:
+            raise ErrorDatos("No se encontró el usuario que registra el pago.")
+        confirmado = _id_estado(cur, "Confirmado")
+        ids, recibos, nota = [], [], None
+        for x in plan:
+            if x["id_mensualidad"] is None:
+                cur.execute("INSERT INTO MENSUALIDAD (id_inscripcion, periodo, fecha_emision, fecha_vencimiento, monto, estado) "
+                            "OUTPUT INSERTED.id_mensualidad VALUES (?, ?, ?, ?, ?, 'PENDIENTE')",
+                            (x["id_inscripcion"], x["periodo"], x["emision"], x["vence"], x["saldo"]))
+                x["id_mensualidad"] = cur.fetchone()[0]
+            recibo = _siguiente_recibo(cur)
+            if n > 1 and nota is None:
+                nota = f"Cobro de {n} meses · {recibo}"
+            cur.execute("INSERT INTO PAGO (id_mensualidad, id_usuario, id_metodo_pago, id_estado_pago, numero_recibo, "
+                        "fecha_pago, monto, observaciones) OUTPUT INSERTED.id_pago VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (x["id_mensualidad"], quien[0], id_metodo, confirmado, recibo, fecha_pago, x["saldo"], nota))
+            id_pago = cur.fetchone()[0]
+            _auditar(cur, id_pago, "INSERT", usuario, None, x["saldo"], None, "Confirmado")
+            ids.append(id_pago)
+            recibos.append(recibo)
+        return ids[0], recibos
+
+
+def marcar_no_vino(id_mensualidad):
+    """El alumno no vino ese mes: no se le cobra (monto 0). Solo si ese mes no tiene pagos. Devuelve (id_alumno, periodo)."""
+    with transaccion() as cur:
+        cur.execute(f"SELECT i.id_alumno, m.periodo, {PAGADO_SQL} FROM MENSUALIDAD m WITH (UPDLOCK) "
+                    "JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion WHERE m.id_mensualidad = ?", (id_mensualidad,))
+        f = cur.fetchone()
+        if not f:
+            raise ErrorDatos("Esa mensualidad no existe.")
+        if f[2] > 0:
+            raise ErrorDatos("Ese mes ya tiene pagos: primero anula el pago desde su recibo.")
+        cur.execute("UPDATE MENSUALIDAD SET monto = 0, estado = ? WHERE id_mensualidad = ?", (NO_VINO, id_mensualidad))
+        return f[0], f[1]
+
+
+def volver_a_cobrar(id_mensualidad):
+    """Deshace «No vino»: el mes vuelve a cobrarse con el precio del grupo y la beca de ahora."""
+    with transaccion() as cur:
+        cur.execute("""UPDATE m SET monto = ROUND(g.precio_mensual * (100 - a.porcentaje_beca) / 100, 2), estado = 'PENDIENTE'
+                       OUTPUT i.id_alumno
+                       FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                       JOIN GRUPO g ON g.id_grupo = i.id_grupo JOIN ALUMNO a ON a.id_alumno = i.id_alumno
+                       WHERE m.id_mensualidad = ? AND m.estado = ?""", (id_mensualidad, NO_VINO))
+        f = cur.fetchone()
+        if not f:
+            raise ErrorDatos("Ese mes no estaba marcado como «No vino».")
+        return f[0]
 
 
 def periodos_generados():
@@ -179,7 +306,7 @@ def mensualidades_de_alumno(id_alumno):
     """Todas las mensualidades del alumno (de todas sus inscripciones) con lo pagado y el saldo."""
     filas = consultar(
         f"""SELECT m.id_mensualidad, m.periodo, m.fecha_emision, m.fecha_vencimiento, m.monto,
-                   {PAGADO_SQL} AS pagado, g.nombre AS grupo, i.estado AS estado_inscripcion
+                   {PAGADO_SQL} AS pagado, g.nombre AS grupo, i.estado AS estado_inscripcion, m.estado AS marca
             FROM MENSUALIDAD m
             JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
             JOIN GRUPO g ON g.id_grupo = i.id_grupo
@@ -187,7 +314,7 @@ def mensualidades_de_alumno(id_alumno):
             ORDER BY m.periodo DESC, g.nombre""", (id_alumno,))
     for m in filas:
         m["saldo"] = m["monto"] - m["pagado"]
-        m["estado"] = _estado_mensualidad(m)
+        m["estado"] = "No vino" if m["marca"] == NO_VINO else _estado_mensualidad(m)
         m["dias_atraso"] = (date.today() - m["fecha_vencimiento"]).days if m["estado"] == "Vencida" else 0
     return filas
 
@@ -240,6 +367,13 @@ def obtener_pago(id_pago):
         p["anulable"] = p["numero_recibo"].startswith(PREFIJO_RECIBO) and p["estado"] != "Anulado"
         mensualidad = obtener_mensualidad(p["id_mensualidad"])
         p["saldo_mensualidad"] = mensualidad["saldo"]
+        # Cobro de varios meses: todos sus pagos van en el mismo recibo
+        p["juntos"] = []
+        if (p["observaciones"] or "").startswith("Cobro de ") and p["estado"] != "Anulado":
+            p["juntos"] = consultar(_SELECT_PAGO + " WHERE p.observaciones = ? AND e.nombre <> 'Anulado' ORDER BY m.periodo",
+                                    (p["observaciones"],))
+        p["lineas"] = p["juntos"] or [p]
+        p["total"] = sum(x["monto"] for x in p["lineas"])
         p["auditoria"] = consultar("SELECT * FROM AUDITORIA_PAGO WHERE id_pago = ? ORDER BY fecha, id_auditoria", (id_pago,))
     return p
 
