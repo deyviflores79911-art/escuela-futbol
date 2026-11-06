@@ -6,7 +6,7 @@
 {{ pestanas([('catalogos.grupos', 'Grupos'), ('catalogos.categorias', 'Categorías'), ('catalogos.horarios', 'Horarios')]) }}
 <div class="barra-titulo">
   <div>
-    <h1>Grupos</h1>
+    <h1 class="solo-lector">Grupos</h1>
     {% set activos = grupos|selectattr('estado', 'equalto', 'ACTIVO')|list %}
     <p class="subtitulo">{{ activos|length }} grupo{{ 's' if activos|length != 1 }} activo{{ 's' if activos|length != 1 }} ·
       {{ activos|sum(attribute='inscritos') }} alumnos inscritos · {{ activos|sum(attribute='libres') }} cupos libres</p>

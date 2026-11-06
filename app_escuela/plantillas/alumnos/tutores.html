@@ -6,13 +6,13 @@
 {{ pestanas([('alumnos.lista', 'Alumnos'), ('alumnos.tutores', 'Tutores')]) }}
 <div class="barra-titulo">
   <div>
-    <h1>Tutores</h1>
+    <h1 class="solo-lector">Tutores</h1>
   </div>
 </div>
 <form class="tarjeta filtros filtros-alumnos" method="get" role="search" data-busqueda-vivo="#resultados">
   <div class="campo">
     <label for="q">Buscar</label>
-    <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" placeholder="Nombre, apellido, CI o teléfono">
+    <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" placeholder="Nombre, CI o celular">
   </div>
   <div class="botones">
     <button class="boton">Buscar</button>
@@ -21,7 +21,7 @@
 </form>
 <div id="resultados" aria-live="polite">
 {% if tutores %}
-<p class="ayuda">{{ tutores|length }} tutor{{ 'es' if tutores|length != 1 }}{% if tutores|length >= maximo %} (se muestran los primeros {{ maximo }}){% endif %}.</p>
+{% if q %}<p class="ayuda">{{ tutores|length }} tutor{{ 'es' if tutores|length != 1 }}{% if tutores|length >= maximo %} (se muestran los primeros {{ maximo }}){% endif %}.</p>{% endif %}
 <ul class="lista-filas">
   {% for t in tutores %}
   <li>

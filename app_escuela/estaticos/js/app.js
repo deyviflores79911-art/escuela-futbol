@@ -1,3 +1,5 @@
+document.documentElement.classList.add("js");   // hay JavaScript: los estilos pueden ocultar lo que sobra
+
 // Botón sol/luna: cambia el modo y recuerda la elección
 document.getElementById("boton-tema").addEventListener("click", function () {
   var raiz = document.documentElement;

@@ -213,7 +213,8 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--naranja); box-shadow: 0 0 0 3px rgba(242, 140, 40, .25); outline: none; }
 input[aria-invalid="true"] { border-color: var(--error); }
 .error-campo { color: var(--error); font-size: .9rem; margin: 0; font-weight: 500; }
-.grupo-campos { border: 1px dashed var(--borde); border-radius: var(--radio); padding: .75rem 1rem 0; margin: 0 0 1rem; }
+.grupo-campos { border: 0; border-top: 1px solid var(--borde); border-radius: 0; padding: .9rem 0 0; margin: 0 0 1rem; min-width: 0; }
+.grupo-campos > legend { font-size: .95rem; color: var(--texto-suave); padding: 0 .5rem 0 0; letter-spacing: .6px; }
 .grupo-campos[disabled] { display: none; }
 .dos-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 1rem; }
 .botones { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
@@ -283,7 +284,8 @@ h3.titulo-seccion small { font-family: var(--fuente-texto); text-transform: none
 details summary { cursor: pointer; font-weight: 500; }
 
 /* ===== Etapa 2: alumnos, grupos y catálogos ===== */
-.pestanas { display: flex; gap: .25rem; border-bottom: 2px solid var(--borde); margin-bottom: 1.25rem; overflow-x: auto; }
+.pestanas { display: flex; gap: .25rem; border-bottom: 2px solid var(--borde); margin: 0 0 1rem; overflow-x: auto; }
+.pestanas + .barra-titulo, .pestanas + .solo-lector + .barra-titulo { margin-top: 0; }
 .pestanas a { padding: .55rem 1rem; color: var(--texto-suave); text-decoration: none; font-weight: 500; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; }
 .pestanas a:hover { color: var(--texto); }
 .pestanas a[aria-current="page"] { color: var(--texto); border-bottom-color: var(--naranja); }
@@ -645,7 +647,9 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
   /* Botones de formularios y barras: a lo ancho, fáciles de tocar */
   .botones { flex-direction: column; align-items: stretch; }
   .botones .boton { width: 100%; }
-  .barra-titulo > .boton, .barra-titulo > a.boton { width: 100%; }
+  .barra-titulo:has(> .boton) { flex-wrap: nowrap; align-items: center; }
+  .barra-titulo > .boton { width: auto; flex-shrink: 0; min-height: 40px; padding: .35rem .85rem; font-size: .92rem; }
+  .barra-titulo .subtitulo { margin: 0; font-size: .92rem; }
   .acciones { width: 100%; }
   .acciones .boton, .acciones form { flex: 1 1 0; }
   .acciones form .boton { width: 100%; }
@@ -742,3 +746,13 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 
 /* Celular con la app instalada: sin animación de entrada (se siente más rápida) */
 @media (display-mode: standalone) { .contenido { animation: none; } }
+
+/* Búsqueda mientras se escribe: el botón "Buscar" sobra (si no hay JavaScript, sigue apareciendo) */
+.js form[data-busqueda-vivo] button { display: none; }
+.js .filtros-alumnos { grid-template-columns: minmax(0, 1fr) auto; }
+.js .filtros-alumnos .botones:not(:has(a)) { display: none; }
+.js .filtros-alumnos:not(:has(select)) { grid-template-columns: minmax(0, 1fr); }
+/* Buscadores: sin título visible (el texto de adentro ya dice qué buscar), igual en todas las pantallas */
+.filtros-alumnos .campo > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.filtros-alumnos .campo { margin-bottom: 0; }
+.filtros-alumnos { padding: .75rem; }

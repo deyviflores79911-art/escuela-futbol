@@ -6,7 +6,7 @@
 {{ pestanas([('alumnos.lista', 'Alumnos'), ('alumnos.tutores', 'Tutores')]) }}
 <div class="barra-titulo">
   <div>
-    <h1>Alumnos</h1>
+    <h1 class="solo-lector">Alumnos</h1>
     <p class="subtitulo">{{ total.activos or 0 }} activos de {{ total.total }} registrados.</p>
   </div>
   <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Nuevo alumno</a>
@@ -16,7 +16,7 @@
   <div class="campo">
     <label for="q">Buscar</label>
     <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" autofocus
-           placeholder="Nombre, apellido, código o tutor (nombre o CI)">
+           placeholder="Alumno, código o tutor">
   </div>
   <div class="campo">
     <label for="estado">Estado</label>
@@ -36,7 +36,7 @@
 <div id="resultados" aria-live="polite">
 {% if alumnos %}
 {% set mostrar = alumnos if todos else alumnos[:por_pagina] %}
-<p class="ayuda">{{ alumnos|length }} resultado{{ 's' if alumnos|length != 1 }}{% if alumnos|length >= maximo %} (se muestran los primeros {{ maximo }}; afina la búsqueda){% endif %}.</p>
+{% if q or estado %}<p class="ayuda">{{ alumnos|length }} resultado{{ 's' if alumnos|length != 1 }}{% if alumnos|length >= maximo %} (se muestran los primeros {{ maximo }}; afina la búsqueda){% endif %}.</p>{% endif %}
 <ul class="lista-filas">
   {% for a in mostrar %}
   <li>

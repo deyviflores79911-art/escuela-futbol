@@ -4,7 +4,7 @@
 {% block titulo %}Deudores{% endblock %}
 {% block contenido %}
 {{ pestanas([('reportes.deudores', 'Deudores'), ('reportes.caja', 'Resumen de caja')]) }}
-<h1>Deudores</h1>
+<h1 class="solo-lector">Deudores</h1>
 
 {% if sin_mes_actual and periodo %}
   <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>{{ mes_actual }} todavía sin mensualidades: se muestra {{ periodo }}.

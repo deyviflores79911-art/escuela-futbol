@@ -4,7 +4,7 @@
 {% block titulo %}Mensualidades{% endblock %}
 {% block contenido %}
 {{ pestanas([('caja.caja', 'Cobrar'), ('caja.mensualidades', 'Mensualidades')]) }}
-<h1>Generar mensualidades</h1>
+<h1 class="solo-lector">Generar mensualidades</h1>
 
 {% set faltan = resumen.activas - resumen.ya_generadas %}
 <section class="tarjeta">
