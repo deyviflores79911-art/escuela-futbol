@@ -756,3 +756,12 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 .filtros-alumnos .campo > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .filtros-alumnos .campo { margin-bottom: 0; }
 .filtros-alumnos { padding: .75rem; }
+
+/* Teclado abierto en el celular: sin barra de abajo y "Guardar" pegado al borde (más lugar para ver lo que se escribe) */
+@media (max-width: 760px) {
+  .escribiendo .barra-inferior { display: none; }
+  .escribiendo body { padding-bottom: env(safe-area-inset-bottom); }
+  .escribiendo .accion-fija { bottom: 0; }
+}
+/* Al saltar a un campo, que no quede tapado por la barra de arriba ni por "Guardar" */
+input, select, textarea { scroll-margin: 96px 0 140px; }

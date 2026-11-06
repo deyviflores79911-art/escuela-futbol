@@ -297,6 +297,68 @@ document.querySelectorAll("form[data-busqueda-vivo]").forEach(function (form) {
   form.addEventListener("change", function (e) { if (e.target.tagName === "SELECT") buscar(); });
 });
 
+// Teclado del celular: mientras se escribe se esconde la barra de abajo (deja más lugar), el campo se centra
+// en lo que queda visible y "Enter" pasa al campo siguiente en vez de enviar el formulario a medias.
+(function () {
+  var raiz = document.documentElement;
+  var SIN_TECLADO = /^(checkbox|radio|button|submit|reset|hidden|range|color|file|date|time|month|week|datetime-local|image)$/;
+  function escribe(el) {
+    return !!el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && !SIN_TECLADO.test(el.type)));
+  }
+  function camposDe(form) {
+    return Array.prototype.filter.call(form.elements, function (c) {
+      return !c.disabled && c.type !== "hidden" && c.offsetParent !== null &&
+             (escribe(c) || c.tagName === "SELECT" ||
+              ((c.type === "date" || c.type === "time" || c.type === "month") && !c.value));   // fecha ya puesta: se salta
+    });
+  }
+
+  document.addEventListener("focusin", function (e) {
+    if (!escribe(e.target)) return;
+    raiz.classList.add("escribiendo");
+    var campo = e.target;
+    setTimeout(function () {   // cuando el teclado ya subió
+      try { campo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (x) { campo.scrollIntoView(); }
+    }, 320);
+  });
+  document.addEventListener("focusout", function () {
+    setTimeout(function () { if (!escribe(document.activeElement)) raiz.classList.remove("escribiendo"); }, 120);
+  });
+  // Si el teclado se cierra con "atrás" sin salir del campo, la barra vuelve
+  if (window.visualViewport) {
+    var alto = window.visualViewport.height;
+    window.visualViewport.addEventListener("resize", function () {
+      var h = window.visualViewport.height;
+      if (h > alto - 80 && raiz.classList.contains("escribiendo") && h >= window.innerHeight * 0.9) raiz.classList.remove("escribiendo");
+      alto = Math.max(alto, h);
+    });
+  }
+
+  // "Siguiente" en el teclado hasta el último campo; ahí "Listo" (envía)
+  document.querySelectorAll("form").forEach(function (form) {
+    if (form.hasAttribute("data-busqueda-vivo") || form.getAttribute("role") === "search") return;
+    var campos = camposDe(form);
+    campos.forEach(function (c, i) {
+      if (escribe(c) && !c.hasAttribute("enterkeyhint")) c.setAttribute("enterkeyhint", i < campos.length - 1 ? "next" : "done");
+    });
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target;
+    if (e.key !== "Enter" || !escribe(el) || el.tagName === "TEXTAREA" || el.type === "search" || !el.form) return;
+    if (el.form.hasAttribute("data-busqueda-vivo") || el.form.getAttribute("role") === "search") return;
+    var campos = camposDe(el.form), i = campos.indexOf(el);
+    if (i > -1 && i < campos.length - 1) { e.preventDefault(); campos[i + 1].focus(); }
+  });
+
+  // Nombres con mayúscula inicial y sin corrector; correos sin mayúsculas
+  document.querySelectorAll("input[name$='nombres'], input[name$='apellidos']").forEach(function (c) {
+    c.setAttribute("autocapitalize", "words"); c.setAttribute("spellcheck", "false"); c.setAttribute("autocorrect", "off");
+  });
+  document.querySelectorAll("input[type=email]").forEach(function (c) {
+    c.setAttribute("autocapitalize", "none"); c.setAttribute("spellcheck", "false"); c.setAttribute("autocorrect", "off");
+  });
+})();
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {
