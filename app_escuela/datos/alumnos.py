@@ -39,6 +39,19 @@ def buscar_tutores(texto=None):
     return consultar(f"SELECT TOP {MAX_RESULTADOS} * FROM ({sql}) x ORDER BY apellidos, nombres", params)
 
 
+def tutores_para_elegir(texto, cantidad=8):
+    """Búsqueda rápida del formulario de alumno nuevo: por nombre completo, CI, teléfono o WhatsApp.
+    Incluye los hijos que ya tiene, para reconocer a la familia."""
+    patron = _patron_like(texto)
+    return consultar(
+        f"""SELECT TOP {int(cantidad)} t.id_tutor, t.nombres, t.apellidos, t.ci, ISNULL(t.whatsapp, t.telefono) AS celular,
+                   (SELECT STRING_AGG(a.nombres, ', ') FROM ALUMNO a WHERE a.id_tutor = t.id_tutor AND a.estado = 'ACTIVO') AS hijos
+            FROM TUTOR t
+            WHERE t.nombres LIKE ? OR t.apellidos LIKE ? OR (t.nombres + ' ' + ISNULL(t.apellidos, '')) LIKE ?
+               OR t.ci LIKE ? OR t.telefono LIKE ? OR t.whatsapp LIKE ?
+            ORDER BY t.apellidos, t.nombres""", (patron,) * 6)
+
+
 def obtener_tutor(id_tutor):
     t = consultar_uno("SELECT * FROM TUTOR WHERE id_tutor = ?", (id_tutor,))
     if t:
@@ -144,6 +157,8 @@ def guardar_alumno(id_alumno, datos, tutor_nuevo=None, inscribir_en=None):
     Si viene tutor_nuevo, se registra primero, en la MISMA transacción: si el alumno falla,
     tampoco queda el tutor. Si viene inscribir_en=(id_grupo, fecha) al crear, se inscribe en la
     misma transacción: si la inscripción no se puede (edad, cupo), tampoco queda el alumno.
+    Si el apellido (o, en un alumno nuevo, la dirección) queda vacío, se usa el del tutor:
+    los hermanos no tienen que volver a escribirlo.
     """
     datos = dict(datos, codigo=datos["codigo"].strip().upper())
     if not re.fullmatch(r"[A-Z0-9-]{2,20}", datos["codigo"]):
@@ -152,9 +167,24 @@ def guardar_alumno(id_alumno, datos, tutor_nuevo=None, inscribir_en=None):
     with transaccion() as cur:
         if tutor_nuevo:
             datos["id_tutor"] = _guardar_tutor(cur, None, tutor_nuevo)
-        cur.execute("SELECT 1 FROM TUTOR WHERE id_tutor = ?", (datos["id_tutor"],))
-        if not cur.fetchone():
-            raise ErrorDatos("Elige un tutor de la lista o registra uno nuevo.")
+        cur.execute("SELECT apellidos, direccion FROM TUTOR WHERE id_tutor = ?", (datos["id_tutor"],))
+        tutor = cur.fetchone()
+        if not tutor:
+            raise ErrorDatos("Busca y elige al tutor, o registra uno nuevo.")
+        if not datos["apellidos"]:
+            datos["apellidos"] = tutor.apellidos
+            if not datos["apellidos"]:
+                raise ErrorDatos("Escribe el apellido del alumno.")
+        if not id_alumno and not datos["direccion"]:
+            datos["direccion"] = tutor.direccion
+        if not id_alumno:
+            # El mismo niño dos veces (doble toque, o lo registraron antes): no se duplica
+            cur.execute("SELECT codigo FROM ALUMNO WHERE id_tutor = ? AND LOWER(LTRIM(RTRIM(nombres))) = LOWER(?) "
+                        "AND fecha_nacimiento = ?", (datos["id_tutor"], datos["nombres"].strip(), datos["fecha_nacimiento"]))
+            repetido = cur.fetchone()
+            if repetido:
+                raise ErrorDatos(f"{datos['nombres']} ya está registrado con este tutor (código {repetido[0]}). "
+                                 "Búscalo en Alumnos para inscribirlo en otro grupo.")
         cur.execute("SELECT nombres + ' ' + ISNULL(apellidos, '') FROM ALUMNO WITH (UPDLOCK, HOLDLOCK) "
                     "WHERE UPPER(codigo) = ? AND id_alumno <> ?", (datos["codigo"], id_alumno or 0))
         fila = cur.fetchone()

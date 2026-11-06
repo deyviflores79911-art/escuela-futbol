@@ -1,7 +1,7 @@
 """Alumnos, tutores e inscripciones (solo el dueño)."""
 from datetime import date
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
 from datos import alumnos, catalogos
 from datos.bd import ErrorDatos
@@ -16,18 +16,20 @@ def _volver(por_defecto):
     return destino_interno(request.args.get("volver"), por_defecto)
 
 
-def _datos_tutor(form, errores, prefijo=""):
+def _datos_tutor(form, errores, prefijo="", whatsapp_obligatorio=False):
     """Lee y valida los campos del tutor (prefijo 'tutor_' en el formulario del alumno)."""
     p = prefijo
-    return {
+    datos = {
         "nombres": validar.texto(form, p + "nombres", errores, "El nombre del tutor"),
         "apellidos": validar.texto(form, p + "apellidos", errores, "El apellido del tutor"),
         "ci": validar.texto(form, p + "ci", errores, "El CI", obligatorio=False, maximo=20),
         "telefono": validar.texto(form, p + "telefono", errores, "El teléfono", obligatorio=False, maximo=20),
-        "whatsapp": validar.texto(form, p + "whatsapp", errores, "El WhatsApp", obligatorio=False, maximo=20),
+        "whatsapp": validar.texto(form, p + "whatsapp", errores, "El WhatsApp", obligatorio=whatsapp_obligatorio, maximo=20),
         "correo": validar.correo(form, p + "correo", errores, obligatorio=False),
         "direccion": validar.texto(form, p + "direccion", errores, "La dirección", obligatorio=False, maximo=200),
     }
+    datos["telefono"] = datos["telefono"] or datos["whatsapp"]   # casi siempre es el mismo número
+    return datos
 
 
 # ---------------------------------------------------------------- Inscribir (botón principal del celular)
@@ -72,18 +74,17 @@ def alumno_form(id_alumno):
                 "id_tutor": str(actual["id_tutor"] or "")}
     else:
         form = {"codigo": alumnos.siguiente_codigo(), "id_tutor": request.args.get("id_tutor", "")}
-    tutores = alumnos.buscar_tutores()
     if request.method == "POST":
         id_tutor = form.get("id_tutor") or ""
         tutor_nuevo = None
         if id_tutor == "nuevo":
-            tutor_nuevo = _datos_tutor(form, errores, "tutor_")
-        elif id_tutor not in {str(t["id_tutor"]) for t in tutores}:
-            errores["id_tutor"] = "Elige el tutor del alumno o registra uno nuevo."
+            tutor_nuevo = _datos_tutor(form, errores, "tutor_", whatsapp_obligatorio=True)
+        elif not id_tutor.isdigit():
+            errores["id_tutor"] = "Busca y elige al tutor, o toca «Tutor nuevo»."
         datos = {
             "codigo": validar.texto(form, "codigo", errores, "El código", maximo=20),
             "nombres": validar.texto(form, "nombres", errores, "El nombre"),
-            "apellidos": validar.texto(form, "apellidos", errores, "El apellido"),
+            "apellidos": validar.texto(form, "apellidos", errores, "El apellido", obligatorio=False),  # vacío = el del tutor
             "fecha_nacimiento": validar.fecha(form, "fecha_nacimiento", errores, "La fecha de nacimiento",
                                               maxima=date.today()),
             "sexo": validar.opcion(form, "sexo", errores, "el sexo", set(alumnos.SEXOS)),
@@ -105,11 +106,19 @@ def alumno_form(id_alumno):
                 return redirect(url_for("alumnos.ficha", id_alumno=id_guardado))
             except ErrorDatos as e:
                 flash(str(e), "error")
-    tutores_opciones = [(t["id_tutor"], f"{t['apellidos'] or ''}, {t['nombres']}" + (f" (CI {t['ci']})" if t["ci"] else ""))
-                        for t in tutores]
+    id_tutor = str(form.get("id_tutor") or "")
+    tutor = alumnos.obtener_tutor(int(id_tutor)) if id_tutor.isdigit() else None
     return render_template("alumnos/alumno_form.html", form=form, errores=errores, id_alumno=id_alumno,
-                           tutores_opciones=tutores_opciones, sexos=alumnos.SEXOS, hoy_iso=date.today().isoformat(),
+                           tutor=tutor, tutor_nuevo=id_tutor == "nuevo", hoy_iso=date.today().isoformat(),
                            grupos=[] if id_alumno else catalogos.listar_grupos(solo_activos=True))
+
+
+@bp.route("/api/tutores")
+@solo_dueno
+def api_tutores():
+    """Búsqueda rápida de tutores para el formulario de alumno (mientras se escribe)."""
+    q = (request.args.get("q") or "").strip()[:60]
+    return jsonify(alumnos.tutores_para_elegir(q) if len(q) >= 2 else [])
 
 
 @bp.route("/alumnos/<int:id_alumno>/estado", methods=["POST"])

@@ -132,8 +132,9 @@ class PruebasEtapa2(PruebaConBaseQueSeDeshace):
         r = enviar(self.dueno, "/alumnos/nuevo", {"codigo": "", "nombres": "", "apellidos": "", "fecha_nacimiento": manana,
                                                   "sexo": "X", "id_tutor": ""})
         t = texto(r)
-        for mensaje in ("El código es obligatorio", "El nombre es obligatorio", "El apellido es obligatorio",
-                        "no puede ser futura", "El sexo no es válido", "Elige el tutor"):
+        # El apellido ya no es obligatorio: si queda vacío se usa el del tutor
+        for mensaje in ("El código es obligatorio", "El nombre es obligatorio",
+                        "no puede ser futura", "El sexo no es válido", "Busca y elige al tutor"):
             self.assertIn(mensaje, t)
 
     def test_codigo_no_se_repite(self):

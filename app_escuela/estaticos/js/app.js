@@ -90,6 +90,104 @@ document.querySelectorAll(".form-horarios").forEach(function (f) {
   filtrar();
 })();
 
+// Alumno nuevo: el tutor se busca escribiendo (nombre, CI o celular) y se elige con un toque.
+// Si no existe, "Tutor nuevo" pide solo nombre, apellido y celular. El apellido del alumno se copia del tutor.
+(function () {
+  var caja = document.getElementById("elegir-tutor");
+  if (!caja) return;
+  var oculto = document.getElementById("id_tutor"), elegido = document.getElementById("tutor-elegido");
+  var buscar = document.getElementById("tutor-buscar"), nuevo = document.getElementById("tutor-nuevo");
+  var entrada = document.getElementById("buscar_tutor"), lista = document.getElementById("resultados-tutor");
+  var apellidos = document.getElementById("apellidos");
+  var espera = null, pedido = 0;
+
+  function modo(m) {
+    elegido.hidden = m !== "elegido";
+    buscar.hidden = m !== "buscar";
+    nuevo.hidden = m !== "nuevo";
+    nuevo.disabled = m !== "nuevo";
+  }
+  // El apellido del alumno sigue al del tutor mientras nadie lo escriba a mano
+  if (apellidos) apellidos.addEventListener("input", function () { apellidos.dataset.aMano = apellidos.value ? "1" : ""; });
+  function copiarApellido(texto) {
+    if (apellidos && !apellidos.dataset.aMano) apellidos.value = texto || "";
+  }
+  function poner(campo, texto) { elegido.querySelector("[data-t=" + campo + "]").textContent = texto; }
+
+  function elegir(t) {
+    oculto.value = t.id_tutor;
+    poner("nombre", t.nombres + " " + (t.apellidos || ""));
+    poner("detalle", (t.celular || "Sin celular") + (t.ci ? " · CI " + t.ci : ""));
+    poner("hijos", t.hijos ? "Ya tiene: " + t.hijos : "");
+    copiarApellido(t.apellidos);
+    modo("elegido");
+    var siguiente = document.getElementById("nombres");
+    if (siguiente) siguiente.focus();
+  }
+
+  function crearNuevo() {
+    oculto.value = "nuevo";
+    var q = entrada.value.trim();
+    if (q) {  // lo que ya escribió no se pierde: números al celular, letras al nombre
+      if (/^[\d\s+-]+$/.test(q)) document.getElementById("tutor_whatsapp").value = q;
+      else document.getElementById("tutor_nombres").value = q;
+    }
+    modo("nuevo");
+    document.getElementById(q && !/^[\d\s+-]+$/.test(q) ? "tutor_apellidos" : "tutor_nombres").focus();
+  }
+
+  function mostrar(tutores, q) {
+    lista.innerHTML = "";
+    tutores.forEach(function (t) {
+      var li = document.createElement("li"), b = document.createElement("button"), s = document.createElement("strong");
+      var d = document.createElement("small");
+      b.type = "button";
+      s.textContent = t.nombres + " " + (t.apellidos || "");
+      d.textContent = [t.celular, t.ci ? "CI " + t.ci : "", t.hijos ? "hijos: " + t.hijos : ""].filter(Boolean).join(" · ");
+      b.appendChild(s); b.appendChild(d);
+      b.addEventListener("click", function () { elegir(t); });
+      li.appendChild(b); lista.appendChild(li);
+    });
+    if (!tutores.length && q.length >= 2) {
+      var li = document.createElement("li");
+      li.className = "sin-resultados";
+      li.textContent = "No hay ningún tutor con «" + q + "». Toca «Tutor nuevo».";
+      lista.appendChild(li);
+    }
+  }
+
+  entrada.addEventListener("input", function () {
+    clearTimeout(espera);
+    var q = entrada.value.trim();
+    if (q.length < 2) { lista.innerHTML = ""; return; }
+    espera = setTimeout(function () {
+      var numero = ++pedido;
+      fetch(caja.dataset.url + "?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (numero === pedido) mostrar(d, q); })
+        .catch(function () {});
+    }, 250);
+  });
+  // Enter en el buscador no envía el formulario
+  entrada.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+  caja.querySelectorAll("[data-tutor-nuevo]").forEach(function (b) { b.addEventListener("click", crearNuevo); });
+  caja.querySelectorAll("[data-cambiar-tutor]").forEach(function (b) {
+    b.addEventListener("click", function () { oculto.value = ""; modo("buscar"); entrada.focus(); });
+  });
+  var apTutor = document.getElementById("tutor_apellidos");
+  if (apTutor) apTutor.addEventListener("input", function () { copiarApellido(apTutor.value); });
+  if (apellidos && apellidos.value) apellidos.dataset.aMano = "1";
+  // Sin tutor elegido no se envía: se avisa ahí mismo
+  caja.closest("form").addEventListener("submit", function (e) {
+    if (oculto.value) return;
+    e.preventDefault();
+    modo("buscar");
+    entrada.setAttribute("aria-invalid", "true");
+    lista.innerHTML = '<li class="sin-resultados">Busca y elige al tutor, o toca «Tutor nuevo».</li>';
+    entrada.focus();
+  });
+})();
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {

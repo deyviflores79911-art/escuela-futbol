@@ -13,6 +13,7 @@
   <div class="botones">
     <a class="boton" href="{{ url_for('caja.cuenta', id_alumno=a.id_alumno) }}">Cuenta y cobros</a>
     <a class="boton boton-claro" href="{{ url_for('alumnos.alumno_form', id_alumno=a.id_alumno) }}">Editar</a>
+    {% if a.id_tutor %}<a class="boton boton-claro" href="{{ url_for('alumnos.alumno_form', id_tutor=a.id_tutor) }}">{{ icono('mas') }} Registrar un hermano</a>{% endif %}
     <form method="post" action="{{ url_for('alumnos.alumno_estado', id_alumno=a.id_alumno) }}" class="en-linea"
           data-confirmar="{{ '¿Desactivar a ' ~ a.nombres ~ '?' if a.estado == 'ACTIVO' else '¿Activar de nuevo a ' ~ a.nombres ~ '?' }}">
       {{ csrf() }}<button class="boton {{ 'boton-peligro' if a.estado == 'ACTIVO' else 'boton-claro' }}">{{ 'Desactivar' if a.estado == 'ACTIVO' else 'Activar' }}</button>

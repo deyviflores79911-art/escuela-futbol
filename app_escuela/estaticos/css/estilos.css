@@ -381,6 +381,25 @@ td a { color: var(--texto); }
 .opcion-chip input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--naranja); }
 .opcion-chip:has(input:checked) { border-color: var(--naranja); background: var(--debe-fondo); color: var(--debe-texto); }
 .opcion-todos { font-weight: 700; }
+/* Alumno nuevo: buscador de tutor y Niño / Niña */
+.etiqueta { font-weight: 500; }
+.opciones-chip { display: flex; gap: .5rem; }
+.opcion-grande { flex: 1 1 0; justify-content: center; min-height: 50px; font-size: 1.05rem; }
+.resultados-tutor { list-style: none; margin: 0 0 .75rem; padding: 0; display: grid; gap: .5rem; }
+.resultados-tutor:empty { display: none; }
+.resultados-tutor button { width: 100%; min-height: 52px; text-align: left; font: inherit; color: var(--texto); cursor: pointer;
+                           background: var(--fondo); border: 1px solid var(--borde); border-radius: 12px; padding: .55rem .8rem; }
+.resultados-tutor button:hover, .resultados-tutor button:focus-visible { border-color: var(--naranja); }
+.resultados-tutor strong { display: block; }
+.resultados-tutor small, .resultados-tutor .sin-resultados { color: var(--texto-suave); }
+.tutor-elegido { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem;
+                 padding: .75rem .9rem; border: 2px solid var(--naranja); border-radius: 12px; background: var(--debe-fondo); color: var(--debe-texto); }
+.tutor-elegido > div { display: grid; gap: .1rem; min-width: 0; }
+.tutor-elegido .ayuda { color: inherit; opacity: .85; margin: 0; }
+.boton.ancho { width: 100%; justify-content: center; }
+.mas-datos { margin: 0 0 1rem; }
+.mas-datos summary { padding: .5rem 0; color: var(--texto-suave); }
+.mas-datos[open] summary { margin-bottom: .5rem; }
 .lista-lugares { list-style: none; margin: 0 0 .5rem; padding: 0; }
 .lista-lugares li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem;
                     padding: .6rem 0; border-bottom: 1px solid var(--borde); }
