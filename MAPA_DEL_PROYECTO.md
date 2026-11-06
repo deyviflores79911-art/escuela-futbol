@@ -88,12 +88,12 @@ app_escuela\
 │   ├─ acceso.py          login, logout, inicio, mi contraseña y /api/cambios (tiempo real)
 │   ├─ usuarios.py        gestión de entrenadores (solo dueño)
 │   ├─ catalogos.py       /grupos, /categorias, /horarios y /lugares (solo dueño)
-│   ├─ alumnos.py         /inscribir, /alumnos, /tutores e inscripciones (solo dueño)
+│   ├─ alumnos.py         /alumnos (y alumno nuevo), /tutores, becas e inscripciones (solo dueño)
 │   ├─ caja.py            /caja, /mensualidades, cobrar, recibo y anular (solo dueño)
 │   ├─ reportes.py        /reportes/deudores, /reportes/caja (solo dueño) y /mi-grupo (cada uno el suyo)
 │   └─ validar.py         validaciones de formularios en el servidor
 ├─ plantillas\         HTML (Jinja)
-├─ estaticos\          css\estilos.css (colores en variables; bloque "Celular"), js\, fuentes\, js\vendor\chart.umd.min.js (gráfico del Resumen de caja),
+├─ estaticos\          css\estilos.css (colores en variables; bloque "Celular"), js\, fuentes\,
 │                      img\ (escudo e íconos de la app) y app.webmanifest (instalar en el celular)
 └─ pruebas\            Pruebas automáticas contra la base real
 ```
@@ -112,7 +112,7 @@ app_escuela\
 | Mi grupo (horarios, cupo, Al día / Debe) | Entrenador y dueño (cada uno solo sus grupos, sin montos) | Base, en vivo; se actualiza sola cada 45 s |
 | Mi contraseña | Dueño y entrenador | Base |
 
-El único gráfico de la app (Resumen de caja) se dibuja en el navegador con Chart.js.
+La app no usa gráficos: el Resumen de caja muestra una tabla por método de pago.
 
 **En el celular:** barra fija abajo (dueño: Inicio · Cobrar · Inscribir · Alumnos · Más; entrenador: Inicio · Mi grupo ·
 Más), menú "Más" por secciones (Dinero, Escuela, Mi cuenta), tablas convertidas en tarjetas,
@@ -161,6 +161,8 @@ Las conexiones **no se unifican a propósito**: van a bases distintas, y unifica
 ## 6. Calidad del código
 
 - 05/11/2026: se quitó de la app toda la parte de análisis (pantallas Análisis, Alertas de atraso y Estado del sistema).
+- 06/11/2026: se quitó lo repetido: la pantalla intermedia Inscribir, Nuevo tutor aparte, Mi grupo del dueño, Más opciones del Inicio,
+  el gráfico de caja (y Chart.js), Últimos pagos en Cobrar y el botón Actualizar. "Dar de baja de la escuela" une baja y desactivar.
 - `ruff` no marca imports sin usar, errores ni desorden de importaciones en `app_escuela`.
 - `vulture` no encuentra funciones sin usar; tampoco hay plantillas, clases CSS, íconos ni scripts sin usar.
 - Rendimiento comprobado con unos 1.860 pagos (más del doble de los actuales): la pantalla más lenta respondió en 0,23 s.
