@@ -125,6 +125,28 @@ strong { font-weight: 700; }
 .menu .quien { opacity: .85; font-size: .9rem; }  /* el nombre del usuario lleva a "Mi contraseña" */
 .menu-abrir, .menu-boton { display: none; }
 
+/* Campana de notificaciones con el número de avisos sin ver */
+.boton-avisos { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem;
+                color: var(--sobre-barra); border: 1px solid currentColor; border-radius: 999px; text-decoration: none; }
+.boton-avisos[aria-current="page"] { color: var(--naranja); }
+.boton-avisos .contador { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
+                          background: #d62828; color: #fff; font: 700 .72rem/20px var(--fuente-texto); text-align: center;
+                          border: 2px solid var(--barra); }
+.lista-avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.aviso { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .35rem .75rem; align-items: start; padding: .8rem .9rem;
+         background: var(--superficie); border: 1px solid var(--borde); border-left: 5px solid var(--texto-suave); border-radius: 12px; }
+.aviso > .boton { grid-column: 2; justify-self: start; }
+.aviso-texto { display: grid; gap: .15rem; }
+.aviso-texto span { color: var(--texto-suave); font-size: .92rem; }
+.aviso-icono .icono { width: 26px; height: 26px; }
+.aviso-error { border-left-color: var(--error); } .aviso-error .aviso-icono { color: var(--error); }
+.aviso-aviso { border-left-color: var(--naranja); } .aviso-aviso .aviso-icono { color: var(--naranja); }
+.aviso-info { border-left-color: #2e7d32; }
+.aviso-nuevo { box-shadow: var(--sombra); }
+.cumpleaneros { margin-top: .4rem; }
+.cumpleaneros > li { min-height: 52px; }
+.punto-nuevo { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #d62828; vertical-align: middle; margin-left: .3rem; }
+
 /* Botón sol/luna: se muestra el icono del modo al que se cambiará */
 .boton-tema {
   display: inline-flex; align-items: center; justify-content: center;

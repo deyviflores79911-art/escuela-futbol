@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_iconos.html" import icono %}
+{% block titulo %}Notificaciones{% endblock %}
+{% macro cumpleaneros(lista) %}
+<ul class="lista-filas cumpleaneros">
+  {% for c in lista %}
+  <li>
+    {% if es_dueno %}<a class="fila-principal" href="{{ url_for('alumnos.ficha', id_alumno=c.id_alumno) }}">{% else %}<div class="fila-principal">{% endif %}
+      <strong>{{ c.alumno }}</strong><small>{{ c.cuando }} · cumple {{ c.cumple }} años · {{ c.grupos }}</small>
+    {% if es_dueno %}</a>{% else %}</div>{% endif %}
+    {% if es_dueno and c.wa %}
+    <div class="fila-acciones">
+      <a class="boton boton-claro boton-icono" target="_blank" rel="noopener" aria-label="Saludar a {{ c.tutor }} por WhatsApp"
+         href="https://wa.me/{{ c.wa }}?text={{ ('Hola, desde la Escuela de Fútbol Fortaleza le deseamos un feliz cumpleaños a ' ~ c.nombres ~ '.')|urlencode }}">{{ icono('whatsapp') }}</a>
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+{% block contenido %}
+<h1>Notificaciones</h1>
+{% if avisos %}
+<ul class="lista-avisos">
+  {% for a in avisos %}
+  <li class="aviso aviso-{{ a.nivel }}{{ ' aviso-nuevo' if a.nuevo }}">
+    <span class="aviso-icono">{{ icono(a.icono) }}</span>
+    <div class="aviso-texto">
+      <strong>{{ a.titulo }}{% if a.nuevo %} <span class="punto-nuevo" aria-label="nueva"></span>{% endif %}</strong>
+      {% if a.cumpleaneros %}{{ cumpleaneros(a.cumpleaneros) }}
+      {% elif a.filas %}
+      <ul class="lista-filas cumpleaneros">
+        {% for f in a.filas %}<li><div class="fila-principal"><strong>{{ f.titulo }}</strong></div>
+          <div class="fila-acciones"><span class="estado estado-medio">{{ f.detalle }}</span></div></li>{% endfor %}
+      </ul>
+      {% else %}<span>{{ a.detalle }}</span>{% endif %}
+    </div>
+    {% if a.enlace %}<a class="boton boton-claro boton-chico" href="{{ url_for(a.enlace) }}">{{ a.texto_enlace }}</a>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="tarjeta vacio"><p>{{ icono('check') }} No hay notificaciones.</p></div>
+{% endif %}
+
+{% if proximos %}
+<h2 class="titulo-seccion">Próximos cumpleaños</h2>
+{{ cumpleaneros(proximos) }}
+{% endif %}
+{% endblock %}

@@ -20,12 +20,15 @@
     </div>
     {% if g.alumnos %}
     <ul class="lista-filas">
-      {% for a in g.alumnos|sort(attribute='alumno')|sort(attribute='debe', reverse=true) %}
+      {% for a in (g.alumnos|selectattr('debe')|sort(attribute='alumno')|list)
+                  + (g.alumnos|rejectattr('debe')|selectattr('vence_texto')|sort(attribute='vence_en')|list)
+                  + (g.alumnos|rejectattr('debe')|rejectattr('vence_texto')|sort(attribute='alumno')|list) %}
       <li>
         <div class="fila-principal"><strong>{{ a.alumno }}</strong>
           <small>{{ a.edad ~ ' años' if a.edad is not none else 'Sin fecha de nacimiento' }} · {{ a.codigo }}</small>
           {% if a.fuera_de_edad %}<small class="texto-mal">{{ icono('alerta') }} Fuera de su categoría</small>{% endif %}</div>
         <div class="fila-acciones">{% if a.debe %}<span class="estado estado-mal">{{ icono('alerta') }} Debe</span>
+          {% elif a.vence_texto %}<span class="estado estado-medio">{{ icono('info') }} {{ a.vence_texto }}</span>
           {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}</div>
       </li>
       {% endfor %}

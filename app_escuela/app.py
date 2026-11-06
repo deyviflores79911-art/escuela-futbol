@@ -18,6 +18,7 @@ from datos.letras import monto_en_letras
 from rutas import (
     acceso,
     alumnos,
+    avisos,
     caja,
     catalogos,
     reportes,
@@ -71,6 +72,7 @@ def crear_app():
     app.register_blueprint(acceso.bp)
     app.register_blueprint(rutas_usuarios.bp)
     app.register_blueprint(alumnos.bp)
+    app.register_blueprint(avisos.bp)
     app.register_blueprint(catalogos.bp)
     app.register_blueprint(caja.bp)
     app.register_blueprint(reportes.bp)

@@ -30,6 +30,12 @@
 <body{% if usuario %} data-huella="{{ huella_datos() }}" data-url-cambios="{{ url_for('acceso.cambios') }}"{% endif %}>
   <header class="cabecera">
     <a class="marca" href="{{ url_for('acceso.inicio') }}" aria-label="Escuela de Fútbol Fortaleza — inicio"><img src="{{ url_for('static', filename='img/escudo-barra.png') }}" alt="" width="38" height="38"><span class="marca-texto"><small>Escuela de Fútbol</small><span>Fortaleza</span></span></a>
+    {% if usuario %}
+    {% set n_avisos = avisos_sin_ver() %}
+    <a class="boton-avisos" href="{{ url_for('avisos.notificaciones') }}"
+       aria-label="Notificaciones{{ ' (' ~ n_avisos ~ ' sin ver)' if n_avisos }}" {% if request.endpoint == 'avisos.notificaciones' %}aria-current="page"{% endif %}>
+      {{ icono('campana') }}{% if n_avisos %}<span class="contador">{{ n_avisos if n_avisos < 10 else '9+' }}</span>{% endif %}</a>
+    {% endif %}
     <button type="button" class="boton-tema" id="boton-tema" aria-label="Cambiar entre modo claro y oscuro" title="Cambiar modo claro / oscuro">
       {{ icono('luna') }}{{ icono('sol') }}
     </button>

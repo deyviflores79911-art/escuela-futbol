@@ -182,11 +182,11 @@ class PruebasPantallasCompactas(PruebaConBaseQueSeDeshace):
     def test_inicio_recuerda_generar_el_mes(self):
         from datos import pagos
         r = pagos.resumen_periodo(pagos.periodo_actual())
-        t = texto(self.dueno.get("/"))
+        t = texto(self.dueno.get("/notificaciones"))
         if r["activas"] > r["ya_generadas"]:
-            self.assertIn(f"las mensualidades de {pagos.periodo_actual()}", t)
+            self.assertIn(f"Mensualidades de {pagos.periodo_actual()} sin generar", t)
         else:
-            self.assertNotIn("mensualidades de " + pagos.periodo_actual(), t)
+            self.assertNotIn(f"Mensualidades de {pagos.periodo_actual()} sin generar", t)
 
     def test_lista_de_alumnos_corta_con_ver_todos(self):
         total = self.contar("ALUMNO")

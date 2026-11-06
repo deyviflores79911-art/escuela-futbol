@@ -13,7 +13,7 @@ from flask import (
     url_for,
 )
 
-from datos import alumnos, pagos, reportes, usuarios
+from datos import alumnos, reportes, usuarios
 from datos.cambios import huella
 from rutas import validar
 from rutas.seguridad import destino_interno, iniciar_sesion, login_requerido
@@ -55,8 +55,6 @@ def inicio():
         deudas = reportes.deudores()
         hoy = reportes.resumen_caja(date.today(), date.today())
         return render_template("inicio_dueno.html", hoy=hoy, alumnos=alumnos.contar_alumnos(),
-                               fuera_de_edad=reportes.fuera_de_categoria(),
-                               mes=pagos.periodo_actual(), mes_resumen=pagos.resumen_periodo(pagos.periodo_actual()),
                                deudas={"cantidad": len(deudas), "total": sum(d["adeudado"] for d in deudas)})
     return render_template("inicio_entrenador.html", grupos=reportes.mi_grupo(g.usuario["id_entrenador"]),
                            hoy=date.today())

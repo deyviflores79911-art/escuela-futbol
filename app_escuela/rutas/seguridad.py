@@ -88,7 +88,17 @@ def datos_plantilla():
         "nombre_rol": NOMBRE_ROL.get(u["rol"]) if u else "",
         "minutos_inactividad": MINUTOS_INACTIVIDAD,
         "huella_datos": _huella_segura if u else None,   # se calcula solo si la plantilla la usa
+        "avisos_sin_ver": _avisos_sin_ver if u else None,
     }
+
+
+def _avisos_sin_ver():
+    """Número de la campana (0 si la base no responde: la página igual se muestra)."""
+    from rutas.avisos import sin_ver
+    try:
+        return sin_ver()
+    except Exception:  # noqa: BLE001
+        return 0
 
 
 def _huella_segura():

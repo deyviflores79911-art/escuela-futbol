@@ -82,6 +82,26 @@ def resumen_caja(desde, hasta):
 
 # ---------------------------------------------------------------- Mi grupo (RF-20, RF-21, HU-13, HU-14)
 
+DIAS_SEMANA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+AVISAR_DIAS = 7   # en Mi grupo se muestra "Vence…" si vence dentro de esta cantidad de días
+
+
+def _dias_hasta(fecha, hoy):
+    return (fecha - hoy).days if fecha else None
+
+
+def cuando_vence(fecha, hoy):
+    """'Vence hoy', 'Vence mañana', 'Vence el lunes 9' (solo si vence pronto; si no, None)."""
+    dias = _dias_hasta(fecha, hoy)
+    if dias is None or dias > AVISAR_DIAS:
+        return None
+    if dias == 0:
+        return "Vence hoy"
+    if dias == 1:
+        return "Vence mañana"
+    return f"Vence el {DIAS_SEMANA[fecha.weekday()]} {fecha.day}"
+
+
 def mi_grupo(id_entrenador, hoy=None):
     """
     Los grupos activos del entrenador con horarios, cupo y alumnos. De cada alumno solo se entrega
@@ -96,16 +116,22 @@ def mi_grupo(id_entrenador, hoy=None):
             f"""SELECT a.id_alumno, a.codigo, a.nombres, a.apellidos, a.fecha_nacimiento,
                        (SELECT COUNT(*) FROM (SELECT m.monto, {PAGADO_SQL} AS pagado FROM MENSUALIDAD m
                                               WHERE m.id_inscripcion = i.id_inscripcion AND m.fecha_vencimiento < ?) x
-                        WHERE x.monto > x.pagado) AS vencidas_con_saldo
+                        WHERE x.monto > x.pagado) AS vencidas_con_saldo,
+                       (SELECT MIN(x.fecha_vencimiento) FROM (SELECT m.monto, m.fecha_vencimiento, {PAGADO_SQL} AS pagado
+                                                             FROM MENSUALIDAD m
+                                                             WHERE m.id_inscripcion = i.id_inscripcion AND m.fecha_vencimiento >= ?) x
+                        WHERE x.monto > x.pagado) AS proximo_vencimiento
                 FROM INSCRIPCION i JOIN ALUMNO a ON a.id_alumno = i.id_alumno
                 WHERE i.id_grupo = ? AND i.estado = 'ACTIVA'
-                ORDER BY a.apellidos, a.nombres""", (hoy, g["id_grupo"]))
+                ORDER BY a.apellidos, a.nombres""", (hoy, hoy, g["id_grupo"]))
         g["alumnos"] = [{"id_alumno": f["id_alumno"], "codigo": f["codigo"],
                          "alumno": f"{f['nombres']} {f['apellidos'] or ''}".strip(),
                          "edad": edad(f["fecha_nacimiento"], hoy),
                          "fuera_de_edad": (edad(f["fecha_nacimiento"], hoy) is not None and not
                                            g["edad_minima"] <= edad(f["fecha_nacimiento"], hoy) <= g["edad_maxima"]),
-                         "debe": f["vencidas_con_saldo"] > 0} for f in filas]
+                         "debe": f["vencidas_con_saldo"] > 0,
+                         "vence": f["proximo_vencimiento"], "vence_en": _dias_hasta(f["proximo_vencimiento"], hoy),
+                         "vence_texto": cuando_vence(f["proximo_vencimiento"], hoy)} for f in filas]
         g["al_dia"] = sum(1 for a in g["alumnos"] if not a["debe"])
         g["deben"] = len(g["alumnos"]) - g["al_dia"]
     return grupos
@@ -117,7 +143,7 @@ def fuera_de_categoria(hoy=None):
     """Alumnos con inscripción ACTIVA en un grupo que no es de su edad (también los que cumplieron años)."""
     hoy = hoy or date.today()
     filas = consultar("""SELECT a.id_alumno, a.codigo, a.nombres, a.apellidos, a.fecha_nacimiento,
-                                g.nombre AS grupo, c.edad_minima, c.edad_maxima
+                                g.id_grupo, g.nombre AS grupo, c.edad_minima, c.edad_maxima
                          FROM INSCRIPCION i JOIN ALUMNO a ON a.id_alumno = i.id_alumno
                          JOIN GRUPO g ON g.id_grupo = i.id_grupo JOIN CATEGORIA c ON c.id_categoria = g.id_categoria
                          WHERE i.estado = 'ACTIVA' ORDER BY g.nombre, a.apellidos, a.nombres""")
@@ -126,6 +152,7 @@ def fuera_de_categoria(hoy=None):
         anios = edad(f["fecha_nacimiento"], hoy)
         if anios is not None and not f["edad_minima"] <= anios <= f["edad_maxima"]:
             lista.append({"id_alumno": f["id_alumno"], "codigo": f["codigo"], "edad": anios, "grupo": f["grupo"],
+                          "id_grupo": f["id_grupo"],
                           "alumno": f"{f['nombres']} {f['apellidos'] or ''}".strip(),
                           "rango": f"{f['edad_minima']}-{f['edad_maxima']}"})
     return lista
