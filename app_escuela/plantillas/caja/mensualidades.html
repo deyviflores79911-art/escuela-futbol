@@ -5,68 +5,65 @@
 {% block contenido %}
 {{ pestanas([('caja.caja', 'Cobrar'), ('caja.mensualidades', 'Mensualidades')]) }}
 <h1>Generar mensualidades</h1>
-<p class="subtitulo">Crea una mensualidad por cada inscripción activa, con el precio actual de su grupo. Nunca se duplican.</p>
+<p class="subtitulo intro">Una mensualidad por cada inscripción activa, con el precio de su grupo (y su beca). Nunca se duplican.</p>
 
-<div class="rejilla-ficha">
-  <section class="tarjeta">
-    <h2>1. Elige el periodo</h2>
-    <form method="get" class="form-en-linea">
-      <div class="campo">
-        <label for="periodo">Periodo (mes)</label>
-        <input id="periodo" name="periodo" type="month" value="{{ periodo }}" required>
-        {% if errores.get('periodo') %}<p class="error-campo">{{ errores.periodo }}</p>{% endif %}
-      </div>
-      <div class="botones"><button class="boton boton-claro">Ver</button></div>
-    </form>
-    {% set faltan = resumen.activas - resumen.ya_generadas %}
-    <dl class="datos">
-      <dt>Inscripciones activas</dt><dd>{{ resumen.activas }}</dd>
-      <dt>Ya tienen la de {{ periodo }}</dt><dd>{{ resumen.ya_generadas }}</dd>
-      <dt>Se crearán ahora</dt><dd><strong>{{ faltan }}</strong></dd>
-    </dl>
-  </section>
+{% set faltan = resumen.activas - resumen.ya_generadas %}
+<section class="tarjeta">
+  <form method="get" class="mes-elegir">
+    <label for="periodo">Mes</label>
+    <input id="periodo" name="periodo" type="month" value="{{ periodo }}" required>
+    <button class="boton boton-claro boton-chico">Ver</button>
+  </form>
+  {% if errores.get('periodo') %}<p class="error-campo">{{ errores.periodo }}</p>{% endif %}
+  <p class="resumen-linea"><strong>{{ faltan }}</strong> por generar · {{ resumen.ya_generadas }} ya tienen la de {{ periodo }} · {{ resumen.activas }} inscripciones</p>
 
-  <section class="tarjeta">
-    <h2>2. Revisa las fechas y genera</h2>
-    {% if faltan > 0 %}
-    <form method="post" data-confirmar="¿Generar {{ faltan }} mensualidades de {{ periodo }}?">
-      {{ csrf() }}
-      <input type="hidden" name="periodo" value="{{ periodo }}">
+  {% if faltan > 0 %}
+  <form method="post" data-confirmar="¿Generar {{ faltan }} mensualidades de {{ periodo }}?">
+    {{ csrf() }}
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <details class="mas-datos" {% if errores.get('fecha_emision') or errores.get('fecha_vencimiento') %}open{% endif %}>
+      <summary>Emisión {{ emision|fecha }} · vence {{ vencimiento|fecha }} (cambiar)</summary>
       <div class="dos-columnas">
         {{ campo('fecha_emision', 'Fecha de emisión', emision.isoformat(), tipo='date', errores=errores, requerido=true) }}
         {{ campo('fecha_vencimiento', 'Fecha de vencimiento', vencimiento.isoformat(), tipo='date', errores=errores, requerido=true) }}
       </div>
-      <p class="ayuda">Se proponen el día 1 y el día 10 del mes, como las mensualidades anteriores. Puedes cambiarlas.</p>
-      <div class="botones"><button class="boton">{{ icono('mas') }} Generar {{ faltan }} mensualidad{{ 'es' if faltan != 1 }}</button></div>
-    </form>
-    {% elif resumen.activas %}
-      <p class="mensaje mensaje-ok">{{ icono('check') }}<span>Todas las inscripciones activas ya tienen su mensualidad de {{ periodo }}.</span></p>
-    {% else %}
-      <p class="vacio">No hay inscripciones activas. Inscribe alumnos en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
-    {% endif %}
-  </section>
-</div>
-
-<section class="tarjeta">
-  <h2>Periodos generados</h2>
-  {% if periodos %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Periodo</th><th>Vence</th><th>Mensualidades</th><th>Cubiertas</th><th>Con saldo</th><th>Por cobrar</th></tr></thead>
-    <tbody>
-    {% for p in periodos %}
-      <tr>
-        <td><strong>{{ p.periodo }}</strong></td>
-        <td>{{ p.vencimiento|fecha }}</td>
-        <td>{{ p.mensualidades }}</td>
-        <td>{{ p.cubiertas }}</td>
-        <td>{% if p.pendientes %}<span class="estado estado-mal">{{ icono('alerta') }} {{ p.pendientes }}</span>{% else %}<span class="estado estado-ok">{{ icono('check') }} 0</span>{% endif %}</td>
-        <td>{{ p.por_cobrar|bs }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table></div>
+    </details>
+    <div class="botones"><button class="boton">{{ icono('mas') }} Generar {{ faltan }} mensualidad{{ 'es' if faltan != 1 }}</button></div>
+  </form>
+  {% elif resumen.activas %}
+    <p class="mensaje mensaje-ok">{{ icono('check') }}<span>Todas las inscripciones activas ya tienen su mensualidad de {{ periodo }}.</span></p>
   {% else %}
-    <p class="vacio">Todavía no hay mensualidades.</p>
+    <p class="vacio">No hay inscripciones activas. Inscribe alumnos en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
   {% endif %}
 </section>
+
+<h2 class="titulo-seccion">Meses generados</h2>
+{% if periodos %}
+<ul class="lista-filas">
+  {% for p in periodos %}
+  <li class="fila-plegable">
+    <details>
+      <summary>
+        <div class="fila-principal"><strong>{{ p.periodo }}</strong>
+          <small>{{ p.mensualidades }} mensualidades{{ ' · por cobrar ' ~ p.por_cobrar|bs if p.pendientes }}</small></div>
+        <div class="fila-acciones">{% if p.pendientes %}<span class="estado estado-mal">{{ icono('alerta') }} {{ p.pendientes }} deben</span>
+          {% else %}<span class="estado estado-ok">{{ icono('check') }} Todo cobrado</span>{% endif %}</div>
+      </summary>
+      <div class="fila-detalle">
+        <dl class="datos">
+          <dt>Vence</dt><dd>{{ p.vencimiento|fecha }}</dd>
+          <dt>Mensualidades</dt><dd>{{ p.mensualidades }}</dd>
+          <dt>Pagadas</dt><dd>{{ p.cubiertas }}</dd>
+          <dt>Con saldo</dt><dd>{{ p.pendientes }}</dd>
+          <dt>Por cobrar</dt><dd><strong>{{ p.por_cobrar|bs }}</strong></dd>
+        </dl>
+        {% if p.pendientes %}<a class="boton boton-chico" href="{{ url_for('reportes.deudores', periodo=p.periodo) }}">Ver quiénes deben</a>{% endif %}
+      </div>
+    </details>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+  <p class="vacio">Todavía no hay mensualidades.</p>
+{% endif %}
 {% endblock %}

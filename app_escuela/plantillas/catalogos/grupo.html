@@ -20,11 +20,10 @@
   </div>
 </div>
 
-<div class="indicadores">
-  <div class="tarjeta indicador"><span class="valor">{{ g.inscritos }} / {{ g.cupo_maximo }}</span><span>cupos ocupados</span></div>
-  <div class="tarjeta indicador"><span class="valor">{{ g.libres }}</span><span>cupo{{ 's' if g.libres != 1 }} libre{{ 's' if g.libres != 1 }}{{ ' (grupo lleno)' if g.lleno }}</span></div>
-  <div class="tarjeta indicador"><span class="valor">{{ g.horarios|selectattr('estado', 'equalto', 'ACTIVO')|list|length }}</span><span>horarios por semana</span></div>
-</div>
+{% set porcentaje = ((g.inscritos / g.cupo_maximo * 100) if g.cupo_maximo else 0)|round|int %}
+<p class="resumen-linea"><strong>{{ g.inscritos }} / {{ g.cupo_maximo }}</strong> cupos ocupados · {{ g.libres }} cupo{{ 's' if g.libres != 1 }} libre{{ 's' if g.libres != 1 }}{{ ' (lleno)' if g.lleno }}
+  · {{ g.horarios|selectattr('estado', 'equalto', 'ACTIVO')|list|length }} horarios por semana</p>
+<div class="cupo cupo-pagina" role="img" aria-label="{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados"><span style="width: {{ [porcentaje, 100]|min }}%"></span></div>
 
 <section class="tarjeta">
   <div class="barra-titulo">
@@ -32,25 +31,26 @@
     <a class="boton boton-chico" href="{{ url_for('catalogos.horario_form', id_grupo=g.id_grupo) }}">{{ icono('mas') }} Agregar horario</a>
   </div>
   {% if g.horarios %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Día</th><th>Hora</th><th>Lugar</th><th>Estado</th><th>Acciones</th></tr></thead>
-    <tbody>
+  <ul class="lista-filas">
     {% for h in g.horarios %}
-      <tr>
-        <td>{{ h.dia }}</td>
-        <td>{{ h.hora_inicio.strftime('%H:%M') }} – {{ h.hora_fin.strftime('%H:%M') }}</td>
-        <td>{{ h.lugar or '—' }}{% if mapa(h.lugar) %} <a class="como-llegar" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">Cómo llegar</a>{% endif %}</td>
-        <td>{% if h.estado == 'ACTIVO' %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}</td>
-        <td class="acciones">
+    <li class="fila-plegable{{ ' inactivo' if h.estado != 'ACTIVO' }}">
+      <details>
+        <summary>
+          <div class="fila-principal"><strong>{{ h.dia }} {{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}</strong>
+            <small>{{ h.lugar or 'Sin lugar' }}</small></div>
+          {% if h.estado != 'ACTIVO' %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span></div>{% endif %}
+        </summary>
+        <div class="fila-detalle botones">
+          {% if mapa(h.lugar) %}<a class="boton boton-claro boton-chico" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">{{ icono('mapa') }} Cómo llegar</a>{% endif %}
           <a class="boton boton-claro boton-chico" href="{{ url_for('catalogos.horario_form', id_grupo=g.id_grupo, id_horario=h.id_horario) }}">Editar</a>
           <form method="post" action="{{ url_for('catalogos.horario_estado', id_horario=h.id_horario) }}" class="en-linea">
             {{ csrf() }}<button class="boton boton-claro boton-chico">{{ 'Desactivar' if h.estado == 'ACTIVO' else 'Activar' }}</button>
           </form>
-        </td>
-      </tr>
+        </div>
+      </details>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
+  </ul>
   {% else %}
     <p class="vacio">Este grupo todavía no tiene horarios. Agrega el primero.</p>
   {% endif %}
@@ -61,28 +61,37 @@
   <h2>Alumnos inscritos ({{ activos|length }})</h2>
   <p class="ayuda">Para inscribir a alguien, abre su ficha en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
   {% if inscritos %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Alumno</th><th>Edad</th><th>Tutor</th><th>Inscrito el</th><th>Estado</th><th>Acciones</th></tr></thead>
-    <tbody>
+  <ul class="lista-filas">
     {% for i in inscritos %}
-      <tr>
-        <td><a href="{{ url_for('alumnos.ficha', id_alumno=i.id_alumno) }}"><strong>{{ i.nombres }} {{ i.apellidos or '' }}</strong></a><br><span class="ayuda">{{ i.codigo }}</span></td>
-        <td>{{ i.edad if i.edad is not none else '—' }}{% if i.edad is not none and (i.edad < g.edad_minima or i.edad > g.edad_maxima) %} <br><span class="estado estado-mal">{{ icono('alerta') }} Fuera de su categoría</span>{% endif %}</td>
-        <td>{{ i.tutor or '—' }}<br><span class="ayuda">{{ i.telefono or '' }}</span></td>
-        <td>{{ i.fecha_inscripcion|fecha }}</td>
-        <td>{% if i.estado == 'ACTIVA' %}<span class="estado estado-ok">{{ icono('check') }} Activa</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Baja</span>{% endif %}</td>
-        <td>
-          {% if i.estado == 'ACTIVA' %}
-          <form method="post" action="{{ url_for('alumnos.baja', id_inscripcion=i.id_inscripcion, volver=request.path) }}" class="en-linea"
-                data-confirmar="¿Dar de baja a {{ i.nombres }} de {{ g.nombre }}? Su historial y sus pagos se conservan.">
-            {{ csrf() }}<button class="boton boton-peligro boton-chico">Dar de baja</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
+    {% set fuera = i.edad is not none and (i.edad < g.edad_minima or i.edad > g.edad_maxima) %}
+    <li class="fila-plegable{{ ' inactivo' if i.estado != 'ACTIVA' }}">
+      <details>
+        <summary>
+          <div class="fila-principal"><strong>{{ i.nombres }} {{ i.apellidos or '' }}</strong>
+            <small>{{ i.edad ~ ' años' if i.edad is not none else 'Sin fecha de nacimiento' }} · {{ i.codigo }}</small>
+            {% if fuera %}<small class="texto-mal">{{ icono('alerta') }} Fuera de su categoría</small>{% endif %}</div>
+          {% if i.estado != 'ACTIVA' %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Baja</span></div>{% endif %}
+        </summary>
+        <div class="fila-detalle">
+          <dl class="datos">
+            <dt>Tutor</dt><dd>{{ i.tutor or '—' }}</dd>
+            <dt>Celular</dt><dd>{{ i.telefono or '—' }}</dd>
+            <dt>Inscrito el</dt><dd>{{ i.fecha_inscripcion|fecha }}</dd>
+          </dl>
+          <div class="botones">
+            <a class="boton boton-claro boton-chico" href="{{ url_for('alumnos.ficha', id_alumno=i.id_alumno) }}">Ver ficha</a>
+            {% if i.estado == 'ACTIVA' %}
+            <form method="post" action="{{ url_for('alumnos.baja', id_inscripcion=i.id_inscripcion, volver=request.path) }}" class="en-linea"
+                  data-confirmar="¿Dar de baja a {{ i.nombres }} de {{ g.nombre }}? Su historial y sus pagos se conservan.">
+              {{ csrf() }}<button class="boton boton-peligro boton-chico">Dar de baja</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </details>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
+  </ul>
   {% else %}
     <p class="vacio">Todavía no hay alumnos inscritos en este grupo.</p>
   {% endif %}

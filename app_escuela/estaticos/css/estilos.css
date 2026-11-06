@@ -472,6 +472,22 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 .fila-principal small { color: var(--texto-suave); font-size: .88rem; line-height: 1.35; }
 .fila-acciones { display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
 .texto-mal { color: var(--error); font-weight: 500; }
+/* Fila que se despliega al tocarla: lo esencial arriba, todo el detalle y los botones adentro */
+.lista-filas > li.fila-plegable { display: block; padding: 0; }
+.fila-plegable > details > summary { list-style: none; display: flex; align-items: center; gap: .75rem; min-height: 60px;
+                                     padding: .55rem .8rem; cursor: pointer; }
+.fila-plegable > details > summary::-webkit-details-marker { display: none; }
+.fila-plegable > details > summary::after { content: ""; flex-shrink: 0; width: .55rem; height: .55rem; margin-left: .2rem;
+                                            border-right: 2px solid var(--texto-suave); border-bottom: 2px solid var(--texto-suave);
+                                            transform: rotate(45deg); transition: transform var(--transicion); }
+.fila-plegable > details[open] > summary::after { transform: rotate(225deg); }
+.fila-plegable > details[open] { border-left: 4px solid var(--naranja); border-radius: 12px; }
+.fila-detalle { display: grid; gap: .6rem; padding: .6rem .8rem .8rem; border-top: 1px solid var(--borde); }
+.fila-detalle.botones { display: flex; flex-wrap: wrap; }
+.lista-filas > li.inactivo { opacity: .65; }
+.mes-elegir { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.mes-elegir input { flex: 1 1 10rem; width: auto; }
+.cupo-pagina { margin: 0 0 1rem; }
 .resumen-linea { margin: .25rem 0 .75rem; font-size: 1.05rem; }
 .botones.separado { margin: 0 0 1rem; }
 .resumen-linea strong { font-family: var(--fuente-titulos); font-size: 1.35rem; }
