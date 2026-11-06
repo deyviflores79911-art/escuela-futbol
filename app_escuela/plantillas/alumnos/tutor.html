@@ -15,8 +15,7 @@
     <h2>Contacto</h2>
     <dl class="datos">
       <dt>CI</dt><dd>{{ t.ci or '—' }}</dd>
-      <dt>Teléfono</dt><dd>{{ t.telefono or '—' }}</dd>
-      <dt>WhatsApp</dt><dd>{{ t.whatsapp or '—' }}</dd>
+      <dt>Celular</dt><dd>{{ t.whatsapp or t.telefono or '—' }}</dd>
       <dt>Correo</dt><dd>{{ t.correo or '—' }}</dd>
       <dt>Dirección</dt><dd>{{ t.direccion or '—' }}</dd>
     </dl>

@@ -23,12 +23,11 @@ def _datos_tutor(form, errores, prefijo="", whatsapp_obligatorio=False):
         "nombres": validar.texto(form, p + "nombres", errores, "El nombre del tutor"),
         "apellidos": validar.texto(form, p + "apellidos", errores, "El apellido del tutor"),
         "ci": validar.texto(form, p + "ci", errores, "El CI", obligatorio=False, maximo=20),
-        "telefono": validar.texto(form, p + "telefono", errores, "El teléfono", obligatorio=False, maximo=20),
-        "whatsapp": validar.texto(form, p + "whatsapp", errores, "El WhatsApp", obligatorio=whatsapp_obligatorio, maximo=20),
+        "whatsapp": validar.texto(form, p + "whatsapp", errores, "El celular", obligatorio=whatsapp_obligatorio, maximo=20),
         "correo": validar.correo(form, p + "correo", errores, obligatorio=False),
         "direccion": validar.texto(form, p + "direccion", errores, "La dirección", obligatorio=False, maximo=200),
     }
-    datos["telefono"] = datos["telefono"] or datos["whatsapp"]   # casi siempre es el mismo número
+    datos["telefono"] = datos["whatsapp"]   # un solo número: el celular es también su WhatsApp
     return datos
 
 

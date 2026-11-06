@@ -132,7 +132,7 @@ class PruebasAlumnoNuevoRapido(PruebaConBaseQueSeDeshace):
 
     def test_tutor_nuevo_con_tres_datos(self):
         r = self.nuevo(id_tutor="nuevo", tutor_nombres="Rosa", tutor_apellidos="Quispe Prueba", tutor_whatsapp="")
-        self.assertIn("El WhatsApp es obligatorio", texto(r))
+        self.assertIn("El celular es obligatorio", texto(r))
         r = self.nuevo(id_tutor="nuevo", tutor_nombres="Rosa", tutor_apellidos="Quispe Prueba", tutor_whatsapp="70011223")
         self.assertEqual(r.status_code, 302, texto(r)[:300])
         a = consultar_uno("SELECT a.apellidos, t.telefono, t.whatsapp FROM ALUMNO a JOIN TUTOR t ON t.id_tutor = a.id_tutor "

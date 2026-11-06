@@ -11,8 +11,7 @@
       {{ campo('nombres', 'Nombres', form.get('nombres'), errores=errores, requerido=true, extra='maxlength="100"') }}
       {{ campo('apellidos', 'Apellidos', form.get('apellidos'), errores=errores, requerido=true, extra='maxlength="100"') }}
       {{ campo('ci', 'CI', form.get('ci'), errores=errores, extra='maxlength="20"') }}
-      {{ campo('telefono', 'Teléfono', form.get('telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
-      {{ campo('whatsapp', 'WhatsApp', form.get('whatsapp'), tipo='tel', errores=errores, extra='maxlength="20"') }}
+      {{ campo('whatsapp', 'Celular (WhatsApp)', form.get('whatsapp') or form.get('telefono'), tipo='tel', errores=errores, extra='maxlength="20" inputmode="tel"') }}
       {{ campo('correo', 'Correo', form.get('correo'), tipo='email', errores=errores, extra='maxlength="100"') }}
       {{ campo('direccion', 'Dirección', form.get('direccion'), errores=errores, extra='maxlength="200"') }}
     </div>

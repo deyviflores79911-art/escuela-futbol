@@ -38,8 +38,7 @@
     <dl class="datos">
       <dt>Nombre</dt><dd><a href="{{ url_for('alumnos.tutor', id_tutor=a.id_tutor) }}">{{ a.tutor }}</a></dd>
       <dt>CI</dt><dd>{{ a.tutor_ci or '—' }}</dd>
-      <dt>Teléfono</dt><dd>{{ a.tutor_telefono or '—' }}</dd>
-      <dt>WhatsApp</dt><dd>{{ a.tutor_whatsapp or '—' }}</dd>
+      <dt>Celular</dt><dd>{{ a.tutor_whatsapp or a.tutor_telefono or '—' }}</dd>
     </dl>
     {% else %}<p class="vacio">Sin tutor registrado.</p>{% endif %}
   </section>

@@ -41,10 +41,9 @@
           {{ campo('tutor_whatsapp', 'Celular (WhatsApp)', form.get('tutor_whatsapp'), tipo='tel', errores=errores, requerido=true, extra='maxlength="20" inputmode="tel" autocomplete="off"') }}
         </div>
         <details class="mas-datos" {% if form.get('tutor_ci') or form.get('tutor_correo') or form.get('tutor_direccion') or errores.tutor_correo %}open{% endif %}>
-          <summary>Más datos del tutor (opcional)</summary>
+          <summary>CI, correo y dirección del tutor (opcional)</summary>
           <div class="dos-columnas">
             {{ campo('tutor_ci', 'CI', form.get('tutor_ci'), errores=errores, extra='maxlength="20"') }}
-            {{ campo('tutor_telefono', 'Otro teléfono', form.get('tutor_telefono'), tipo='tel', errores=errores, extra='maxlength="20"') }}
             {{ campo('tutor_correo', 'Correo', form.get('tutor_correo'), tipo='email', errores=errores, extra='maxlength="100"') }}
             {{ campo('tutor_direccion', 'Dirección', form.get('tutor_direccion'), errores=errores, extra='maxlength="200"') }}
           </div>
