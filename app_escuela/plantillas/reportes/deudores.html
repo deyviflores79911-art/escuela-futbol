@@ -7,8 +7,7 @@
 <h1 class="solo-lector">Deudores</h1>
 
 {% if sin_mes_actual and periodo %}
-  <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>{{ mes_actual }} todavía sin mensualidades: se muestra {{ periodo }}.
-    <a href="{{ url_for('caja.mensualidades') }}">Generar</a></span></p>
+  <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>{{ mes_actual }} todavía sin mensualidades: se muestra {{ periodo }}.</span></p>
 {% endif %}
 
 <details class="tarjeta plegable" {% if categoria or request.args.get('periodo') %}open{% endif %}>

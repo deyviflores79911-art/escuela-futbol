@@ -49,37 +49,40 @@
   <a class="boton boton-claro" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">Ver ficha del alumno</a>
 </div>
 
-{# El historial queda plegado: se abre solo si hace falta #}
-{% if pagadas %}
+{# Historial: cada mes en una línea; al tocarlo se ven sus pagos y recibos #}
+{% if historial %}
 <details class="tarjeta plegable">
-  <summary>Meses pagados ({{ pagadas|length }})</summary>
+  <summary>Historial ({{ historial|length }} mes{{ 'es' if historial|length != 1 }})</summary>
   <ul class="lista-filas">
-    {% for m in pagadas %}
-    <li>
-      {% if m.estado == 'No vino' %}
-      <div class="fila-principal"><strong>{{ m.periodo }}</strong><small>{{ m.grupo }} · no se cobra</small></div>
-      <div class="fila-acciones"><span class="estado">No vino</span>
-        <form method="post" action="{{ url_for('caja.cobrar_igual', id_mensualidad=m.id_mensualidad) }}" class="en-linea">
-          {{ csrf() }}<button class="boton boton-claro boton-chico">Cobrar igual</button></form></div>
-      {% else %}
-      <div class="fila-principal"><strong>{{ m.periodo }}</strong><small>{{ m.grupo }} · {{ m.monto|bs }}</small></div>
-      <div class="fila-acciones"><span class="estado estado-ok">{{ icono('check') }} Pagada</span></div>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-</details>
-{% endif %}
-
-{% if pagos_alumno %}
-<details class="tarjeta plegable">
-  <summary>Pagos y recibos ({{ pagos_alumno|length }})</summary>
-  <ul class="lista-filas">
-    {% for p in pagos_alumno %}
-    <li>
-      <a class="fila-principal" href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }} · {{ p.monto|bs }}</strong>
-        <small>{{ p.fecha_pago|fecha }} · mes {{ p.periodo }} · {{ p.metodo }}</small></a>
-      <div class="fila-acciones">{% include '_estado_pago.html' %}</div>
+    {% for m in historial %}
+    <li class="fila-plegable">
+      <details>
+        <summary>
+          <div class="fila-principal"><strong>{{ m.periodo }}</strong>
+            <small>{{ m.grupo }} · {{ 'no se cobra' if m.estado == 'No vino' else m.monto|bs }}</small></div>
+          <div class="fila-acciones">
+            {% if m.estado == 'No vino' %}<span class="estado">No vino</span>
+            {% elif m.saldo <= 0 %}<span class="estado estado-ok">{{ icono('check') }} Pagada</span>
+            {% else %}<span class="estado estado-mal">Debe {{ m.saldo|bs }}</span>{% endif %}</div>
+        </summary>
+        <div class="fila-detalle">
+          {% if m.pagos %}
+          <ul class="lista-filas">
+            {% for p in m.pagos %}
+            <li>
+              <a class="fila-principal" href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }} · {{ p.monto|bs }}</strong>
+                <small>{{ p.fecha_pago|fecha }} · {{ p.metodo }}</small></a>
+              <div class="fila-acciones">{% include '_estado_pago.html' %}</div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% if m.estado == 'No vino' %}
+          <form method="post" action="{{ url_for('caja.cobrar_igual', id_mensualidad=m.id_mensualidad) }}">
+            {{ csrf() }}<button class="boton boton-claro boton-chico">Cobrar igual</button></form>
+          {% endif %}
+        </div>
+      </details>
     </li>
     {% endfor %}
   </ul>

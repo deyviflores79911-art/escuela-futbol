@@ -159,8 +159,8 @@ class PruebasPantallasCompactas(PruebaConBaseQueSeDeshace):
         self.assertIn("Debe en total", html)
         primero = html.index("boton-cobrar")
         self.assertLess(primero, html.index("Ver ficha del alumno"), "el botón Cobrar va antes que todo lo demás")
-        if "Mensualidades pagadas" in html:
-            self.assertLess(primero, html.index("Mensualidades pagadas"))
+        if "Historial (" in html:
+            self.assertLess(primero, html.index("Historial ("))
 
     def test_recibo_se_envia_por_whatsapp_al_tutor(self):
         p = consultar_uno("""SELECT TOP 1 p.id_pago, ISNULL(t.whatsapp, t.telefono) AS cel, p.numero_recibo FROM PAGO p

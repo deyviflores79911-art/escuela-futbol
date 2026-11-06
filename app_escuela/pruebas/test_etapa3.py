@@ -12,7 +12,7 @@ from unittest import mock
 
 from app import app
 from datos import pagos
-from datos.bd import consultar, consultar_uno
+from datos.bd import ErrorDatos, consultar, consultar_uno
 from pruebas.ayuda import PruebaConBaseQueSeDeshace, cliente_como, enviar
 from pruebas.test_etapa2 import texto
 
@@ -24,9 +24,7 @@ class AyudaCaja:
     """Ayudas para generar mensualidades y cobrar como lo haría el navegador (las usan las Etapas 3 y 4)."""
 
     def generar(self, periodo=PERIODO, emision="2030-01-01", vencimiento="2030-01-10"):
-        return enviar(self.dueno, "/mensualidades", {"periodo": periodo, "fecha_emision": emision,
-                                                     "fecha_vencimiento": vencimiento},
-                      desde=f"/mensualidades?periodo={periodo}")
+        return pagos.generar_mensualidades(periodo, date.fromisoformat(emision), date.fromisoformat(vencimiento))
 
     def una_mensualidad(self):
         """Una mensualidad del periodo de prueba (se genera si hace falta)."""
@@ -59,8 +57,7 @@ class PruebasEtapa3(AyudaCaja, PruebaConBaseQueSeDeshace):
     def test_generar_una_por_inscripcion_activa_sin_duplicar(self):
         activas = self.contar("INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo "
                               "WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO'")
-        r = self.generar()
-        self.assertIn(f"Se crearon {activas} mensualidades de {PERIODO}", texto(self.dueno.get(r.headers["Location"])))
+        self.assertEqual(self.generar()[0], activas)
         # Con el precio del grupo y las fechas elegidas
         malas = consultar("""SELECT m.id_mensualidad FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
                              JOIN GRUPO g ON g.id_grupo = i.id_grupo
@@ -68,18 +65,15 @@ class PruebasEtapa3(AyudaCaja, PruebaConBaseQueSeDeshace):
                                    OR m.fecha_vencimiento <> '2030-01-10')""", (PERIODO,))
         self.assertEqual(malas, [])
         # La segunda vez no duplica y lo informa
-        r = self.generar()
-        self.assertIn(f"Se crearon 0 mensualidades de {PERIODO}. Se omitieron {activas} porque ya existían",
-                      texto(self.dueno.get(r.headers["Location"])))
+        self.assertEqual(self.generar(), (0, activas))
         self.assertEqual(self.contar("MENSUALIDAD WHERE periodo = ?", (PERIODO,)), activas)
 
     def test_generar_valida_fechas_y_periodo(self):
-        r = self.generar(emision="2030-01-15", vencimiento="2030-01-10")
-        pagina = texto(self.dueno.get(r.headers.get("Location", "/mensualidades"))) + texto(r)
-        self.assertIn("no puede ser anterior a la de emisión", pagina)
+        with self.assertRaisesRegex(ErrorDatos, "no puede ser anterior a la de emisión"):
+            self.generar(emision="2030-01-15", vencimiento="2030-01-10")
         self.assertEqual(self.contar("MENSUALIDAD WHERE periodo = ?", (PERIODO,)), 0)
-        r = self.dueno.get("/mensualidades?periodo=2030-13")
-        self.assertIn("El periodo debe tener la forma aaaa-mm", texto(r))
+        with self.assertRaisesRegex(ErrorDatos, "aaaa-mm"):
+            self.generar(periodo="2030-13")
 
     # --------------------------------------------------------------- cobros (HU-08, RF-14, RF-15, RF-17)
 

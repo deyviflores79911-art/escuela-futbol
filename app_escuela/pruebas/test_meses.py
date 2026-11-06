@@ -20,7 +20,7 @@ class PruebasMeses(PruebaConBaseQueSeDeshace):
             WHERE a.estado = 'ACTIVO' AND i.estado = 'ACTIVA' AND g.estado = 'ACTIVO' AND a.porcentaje_beca < 100
               AND g.precio_mensual > 0 ORDER BY a.id_alumno""")
         with bd.transaccion() as cur:
-            cur.execute(f"""DELETE m FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+            cur.execute("""DELETE m FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
                 WHERE i.id_alumno = ? AND NOT EXISTS (SELECT 1 FROM PAGO p WHERE p.id_mensualidad = m.id_mensualidad)""",
                         (a["id_alumno"],))
             cur.execute(f"""UPDATE m SET monto = {pagos.PAGADO_SQL} FROM MENSUALIDAD m
@@ -37,7 +37,7 @@ class PruebasMeses(PruebaConBaseQueSeDeshace):
         id_alumno = self.alumno_al_dia()
         url = f"/caja/alumnos/{id_alumno}/adelantar"
         html, datos = self.formulario(url)
-        self.assertIn('name="meses" value="3"', html)
+        self.assertIn('<option value="3"', html)
         plan = pagos.plan_de_meses(id_alumno, 3)
         self.assertTrue(all(x["id_mensualidad"] is None for x in plan), "son meses que todavía no existen")
         r = self.dueno.post(url, data=dict(datos, meses=3, monto="1"))   # el monto se ignora: se cobran los 3 completos
@@ -72,7 +72,8 @@ class PruebasMeses(PruebaConBaseQueSeDeshace):
                         (x["id_inscripcion"], x["periodo"], x["emision"], x["vence"], x["saldo"]))
             id_m = cur.fetchone()[0]
         html, datos = self.formulario(f"/caja/mensualidades/{id_m}/cobrar")
-        self.assertIn('name="meses" value="2"', html)
+        self.assertIn('<option value="2"', html)
+        self.assertIn("debe 1 + 1 adelantado", html)
         r = self.dueno.post(f"/caja/mensualidades/{id_m}/cobrar", data=dict(datos, meses=2))
         self.assertEqual(r.status_code, 302)
         pagados = consultar("""SELECT m.periodo FROM PAGO p JOIN MENSUALIDAD m ON m.id_mensualidad = p.id_mensualidad

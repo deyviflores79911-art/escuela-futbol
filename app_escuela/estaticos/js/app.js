@@ -366,7 +366,7 @@ document.querySelectorAll("form[data-busqueda-vivo]").forEach(function (form) {
   var monto = document.getElementById("monto"), texto = document.querySelector("[data-periodos-elegidos]");
   var soloLectura = monto && monto.readOnly;
   function poner() {
-    var e = grupo.querySelector("input:checked");
+    var e = grupo.options[grupo.selectedIndex];
     if (!e || !monto) return;
     var varios = e.value !== "1";
     monto.value = e.getAttribute("data-total");

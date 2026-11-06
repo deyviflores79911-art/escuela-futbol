@@ -166,12 +166,15 @@ def plan_de_meses(id_alumno, n=6):
 
 
 def opciones_de_meses(id_alumno):
-    """Para elegir en Cobrar: 1, 2, 3 o 6 meses (y los que debe, si son otra cantidad), con el total de cada opción."""
-    plan = plan_de_meses(id_alumno, 6)
-    deben = sum(1 for x in plan if x["id_mensualidad"])
-    cantidades = sorted({c for c in (1, 2, 3, 6, deben) if 1 <= c <= len(plan)})
-    return [{"n": c, "total": sum(x["saldo"] for x in plan[:c]),
-             "periodos": ", ".join(x["periodo"] for x in plan[:c])} for c in cantidades]
+    """Para elegir en Cobrar: de 1 a 12 meses; primero lo que debe y el resto adelantado, con el total de cada opción."""
+    plan = plan_de_meses(id_alumno, MAX_MESES)
+    opciones = []
+    for c in range(1, len(plan) + 1):
+        deben = sum(1 for x in plan[:c] if x["id_mensualidad"])
+        partes = ([f"debe {deben}"] if deben else []) + ([f"{c - deben} adelantado{'s' if c - deben != 1 else ''}"] if c > deben else [])
+        opciones.append({"n": c, "total": sum(x["saldo"] for x in plan[:c]), "detalle": " + ".join(partes),
+                         "periodos": ", ".join(x["periodo"] for x in plan[:c])})
+    return opciones
 
 
 def cobrar_meses(id_alumno, n, id_metodo, fecha_pago, usuario):

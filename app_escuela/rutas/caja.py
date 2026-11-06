@@ -43,32 +43,11 @@ def _usar_clave_cobro(clave):
 
 # ---------------------------------------------------------------- Mensualidades (RF-13, HU-07)
 
-@bp.route("/mensualidades", methods=["GET", "POST"])
+@bp.route("/mensualidades")
 @solo_dueno
 def mensualidades():
-    form = request.form if request.method == "POST" else request.args
-    periodo = form.get("periodo") or pagos.periodo_actual()
-    errores = validar.Errores()
-    if not pagos.periodo_valido(periodo):
-        errores["periodo"] = "El periodo debe tener la forma aaaa-mm, por ejemplo 2026-10."
-        periodo = pagos.periodo_actual()
-    emision, vencimiento = pagos.fechas_propuestas(periodo)
-    if request.method == "POST" and not errores:
-        emision = validar.fecha(form, "fecha_emision", errores, "La fecha de emisión")
-        vencimiento = validar.fecha(form, "fecha_vencimiento", errores, "La fecha de vencimiento")
-        if not errores:
-            try:
-                creadas, omitidas = pagos.generar_mensualidades(periodo, emision, vencimiento)
-                partes = [f"Se crearon {creadas} mensualidad{'es' if creadas != 1 else ''} de {periodo}."]
-                if omitidas:
-                    partes.append(f"Se omitieron {omitidas} porque ya existían (no se duplican).")
-                flash(" ".join(partes), "ok" if creadas else "aviso")
-                return redirect(url_for("caja.mensualidades", periodo=periodo))
-            except ErrorDatos as e:
-                flash(str(e), "error")
-    return render_template("caja/mensualidades.html", periodo=periodo, errores=errores,
-                           emision=emision, vencimiento=vencimiento, resumen=pagos.resumen_periodo(periodo),
-                           periodos=pagos.periodos_generados())
+    """Los meses con lo cobrado y lo que falta. Se crean solos (el día 1 y al inscribir); lo adelantado, al cobrar."""
+    return render_template("caja/mensualidades.html", periodos=pagos.periodos_generados())
 
 
 # ---------------------------------------------------------------- Caja: buscar alumno y estado de cuenta
@@ -94,9 +73,12 @@ def cuenta(id_alumno):
     mensualidades = pagos.mensualidades_de_alumno(id_alumno)
     # Lo que se debe va arriba y de la más vieja a la más nueva: se cobra primero la más atrasada
     deudas = sorted((m for m in mensualidades if m["saldo"] > 0), key=lambda m: (m["fecha_vencimiento"], m["periodo"]))
+    # Historial: un mes por línea; al tocarlo, sus pagos y recibos
+    recibidos = pagos.pagos_de_alumno(id_alumno)
+    for m in mensualidades:
+        m["pagos"] = [p for p in recibidos if p["id_mensualidad"] == m["id_mensualidad"]]
     return render_template("caja/cuenta.html", a=a, deudas=deudas,
-                           pagadas=[m for m in mensualidades if m["saldo"] <= 0],
-                           pagos_alumno=pagos.pagos_de_alumno(id_alumno),
+                           historial=[m for m in mensualidades if m["saldo"] <= 0 or m["pagos"]],
                            saldo_total=sum(m["saldo"] for m in deudas))
 
 

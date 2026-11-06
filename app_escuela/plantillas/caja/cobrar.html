@@ -17,13 +17,13 @@
     <input type="hidden" name="clave_cobro" value="{{ clave_cobro }}">
     {% if opciones_meses|length > 1 %}
     <div class="campo">
-      <span class="etiqueta" id="etiqueta-meses">{{ 'Meses por adelantado' if adelantar else 'Meses' }}</span>
-      <div class="opciones-metodo" role="radiogroup" aria-labelledby="etiqueta-meses" data-elegir-meses>
+      <label for="meses">{{ 'Meses por adelantado' if adelantar else '¿Cuántos meses paga?' }}</label>
+      <select id="meses" name="meses" data-elegir-meses>
         {% for o in opciones_meses %}
-        <label class="opcion-chip"><input type="radio" name="meses" value="{{ o.n }}" data-total="{{ '%.2f'|format(o.total) }}"
-               data-periodos="{{ o.periodos }}" {% if form.get('meses', '1')|string == o.n|string %}checked{% endif %}> {{ o.n }}</label>
+        <option value="{{ o.n }}" data-total="{{ '%.2f'|format(o.total) }}" data-periodos="{{ o.periodos }}"
+                {% if form.get('meses', '1')|string == o.n|string %}selected{% endif %}>{{ o.n }} mes{{ 'es' if o.n != 1 }}{{ ' (' ~ o.detalle ~ ')' if o.n > 1 }} · {{ o.total|bs }}</option>
         {% endfor %}
-      </div>
+      </select>
       <p class="ayuda" data-periodos-elegidos></p>
     </div>
     {% endif %}
