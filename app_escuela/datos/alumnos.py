@@ -324,7 +324,18 @@ def _inscribir(cur, id_alumno, id_grupo, fecha_inscripcion):
                          "No se inscribió.")
     cur.execute("INSERT INTO INSCRIPCION (id_alumno, id_grupo, fecha_inscripcion, estado) "
                 "OUTPUT INSERTED.id_inscripcion VALUES (?, ?, ?, 'ACTIVA')", (id_alumno, id_grupo, fecha_inscripcion))
-    return cur.fetchone()[0], grupo.nombre
+    id_inscripcion = cur.fetchone()[0]
+    # Mensualidad del mes de la inscripción (si ya tenía una ese mes, p. ej. por cambio de grupo, no se cobra dos veces)
+    periodo = fecha_inscripcion.strftime("%Y-%m")
+    vence = max(fecha_inscripcion, fecha_inscripcion.replace(day=10))
+    cur.execute("""INSERT INTO MENSUALIDAD (id_inscripcion, periodo, fecha_emision, fecha_vencimiento, monto, estado)
+                   SELECT ?, ?, ?, ?, ROUND(g.precio_mensual * (100 - a.porcentaje_beca) / 100, 2), 'PENDIENTE'
+                   FROM GRUPO g, ALUMNO a
+                   WHERE g.id_grupo = ? AND a.id_alumno = ? AND a.porcentaje_beca < 100
+                     AND NOT EXISTS (SELECT 1 FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                                     WHERE i.id_alumno = ? AND m.periodo = ?)""",
+                (id_inscripcion, periodo, fecha_inscripcion, vence, id_grupo, id_alumno, id_alumno, periodo))
+    return id_inscripcion, grupo.nombre
 
 
 def dar_de_baja(id_inscripcion):

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from flask import abort, flash, g, redirect, request, session, url_for
 
 from config import MINUTOS_INACTIVIDAD
-from datos import usuarios
+from datos import pagos, usuarios
 from datos.usuarios import DUENO, ENTRENADOR, NOMBRE_ROL
 
 CABECERA_AUTOMATICA = "X-Consulta-Automatica"   # la envían los refrescos automáticos del navegador
@@ -44,6 +44,11 @@ def cargar_usuario():
     if not request.path.startswith("/static/") and request.headers.get(CABECERA_AUTOMATICA) != "1":
         session["ultima_actividad"] = time.time()
     g.usuario = u
+    if not request.path.startswith("/static/"):
+        try:
+            pagos.asegurar_mes_actual()
+        except Exception:   # si falla, se intenta en la página siguiente; no debe cortar la app
+            pass
 
 
 def destino_interno(destino, por_defecto):

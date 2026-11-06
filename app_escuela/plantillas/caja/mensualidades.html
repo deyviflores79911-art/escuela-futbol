@@ -4,39 +4,8 @@
 {% block titulo %}Mensualidades{% endblock %}
 {% block contenido %}
 {{ pestanas([('caja.caja', 'Cobrar'), ('caja.mensualidades', 'Mensualidades')]) }}
-<h1 class="solo-lector">Generar mensualidades</h1>
+<h1 class="solo-lector">Mensualidades</h1>
 
-{% set faltan = resumen.activas - resumen.ya_generadas %}
-<section class="tarjeta">
-  <form method="get" class="mes-elegir">
-    <label for="periodo">Mes</label>
-    <input id="periodo" name="periodo" type="month" value="{{ periodo }}" required>
-    <button class="boton boton-claro boton-chico">Ver</button>
-  </form>
-  {% if errores.get('periodo') %}<p class="error-campo">{{ errores.periodo }}</p>{% endif %}
-  <p class="resumen-linea"><strong>{{ faltan }}</strong> por generar · {{ resumen.ya_generadas }} ya tienen la de {{ periodo }} · {{ resumen.activas }} inscripciones</p>
-
-  {% if faltan > 0 %}
-  <form method="post" data-confirmar="¿Generar {{ faltan }} mensualidades de {{ periodo }}?">
-    {{ csrf() }}
-    <input type="hidden" name="periodo" value="{{ periodo }}">
-    <details class="mas-datos" {% if errores.get('fecha_emision') or errores.get('fecha_vencimiento') %}open{% endif %}>
-      <summary>Emisión {{ emision|fecha }} · vence {{ vencimiento|fecha }} (cambiar)</summary>
-      <div class="dos-columnas">
-        {{ campo('fecha_emision', 'Fecha de emisión', emision.isoformat(), tipo='date', errores=errores, requerido=true) }}
-        {{ campo('fecha_vencimiento', 'Fecha de vencimiento', vencimiento.isoformat(), tipo='date', errores=errores, requerido=true) }}
-      </div>
-    </details>
-    <div class="botones"><button class="boton">{{ icono('mas') }} Generar {{ faltan }} mensualidad{{ 'es' if faltan != 1 }}</button></div>
-  </form>
-  {% elif resumen.activas %}
-    <p class="mensaje mensaje-ok">{{ icono('check') }}<span>Todas las inscripciones activas ya tienen su mensualidad de {{ periodo }}.</span></p>
-  {% else %}
-    <p class="vacio">No hay inscripciones activas. Inscribe alumnos en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
-  {% endif %}
-</section>
-
-<h2 class="titulo-seccion">Meses generados</h2>
 {% if periodos %}
 <ul class="lista-filas">
   {% for p in periodos %}
@@ -65,4 +34,36 @@
 {% else %}
   <p class="vacio">Todavía no hay mensualidades.</p>
 {% endif %}
+
+{% set faltan = resumen.activas - resumen.ya_generadas %}
+<details class="tarjeta mas-datos" {% if errores %}open{% endif %}>
+  <summary>Crear otro mes</summary>
+  <form method="get" class="mes-elegir">
+    <label for="periodo">Mes</label>
+    <input id="periodo" name="periodo" type="month" value="{{ periodo }}" required>
+    <button class="boton boton-claro boton-chico">Ver</button>
+  </form>
+  {% if errores.get('periodo') %}<p class="error-campo">{{ errores.periodo }}</p>{% endif %}
+  <p class="resumen-linea"><strong>{{ faltan }}</strong> por generar · {{ resumen.ya_generadas }} ya tienen la de {{ periodo }} · {{ resumen.activas }} inscripciones</p>
+
+  {% if faltan > 0 %}
+  <form method="post" data-confirmar="¿Generar {{ faltan }} mensualidades de {{ periodo }}?">
+    {{ csrf() }}
+    <input type="hidden" name="periodo" value="{{ periodo }}">
+    <details class="mas-datos" {% if errores.get('fecha_emision') or errores.get('fecha_vencimiento') %}open{% endif %}>
+      <summary>Emisión {{ emision|fecha }} · vence {{ vencimiento|fecha }} (cambiar)</summary>
+      <div class="dos-columnas">
+        {{ campo('fecha_emision', 'Fecha de emisión', emision.isoformat(), tipo='date', errores=errores, requerido=true) }}
+        {{ campo('fecha_vencimiento', 'Fecha de vencimiento', vencimiento.isoformat(), tipo='date', errores=errores, requerido=true) }}
+      </div>
+    </details>
+    <div class="botones"><button class="boton">{{ icono('mas') }} Generar {{ faltan }} mensualidad{{ 'es' if faltan != 1 }}</button></div>
+  </form>
+  {% elif resumen.activas %}
+    <p class="mensaje mensaje-ok">{{ icono('check') }}<span>Todas las inscripciones activas ya tienen su mensualidad de {{ periodo }}.</span></p>
+  {% else %}
+    <p class="vacio">No hay inscripciones activas. Inscribe alumnos en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
+  {% endif %}
+</details>
+
 {% endblock %}

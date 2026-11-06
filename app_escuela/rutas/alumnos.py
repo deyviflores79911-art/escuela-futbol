@@ -57,7 +57,8 @@ def lista():
 def ficha(id_alumno):
     a = validar.existe_o_404(alumnos.obtener_alumno(id_alumno))
     return render_template("alumnos/ficha.html", a=a, grupos=alumnos.grupos_para_inscribir(id_alumno),
-                           hoy=date.today().isoformat(), sexos=alumnos.SEXOS)
+                           hoy=date.today().isoformat(), sexos=alumnos.SEXOS,
+                           cobrar=pagos.primera_con_saldo([id_alumno]).get(id_alumno))
 
 
 @bp.route("/alumnos/nuevo", methods=["GET", "POST"], defaults={"id_alumno": None})
@@ -115,8 +116,7 @@ def alumno_form(id_alumno):
                 else:
                     flash(f"Alumno {nombre} guardado{inscrito}.", "ok")
                 if datos["porcentaje_beca"]:
-                    flash(f"Beca de {datos['porcentaje_beca']} %: se aplica a las mensualidades que se generen desde ahora"
-                          + (" (no se le generan: no paga)." if datos["porcentaje_beca"] == 100 else "."), "ok")
+                    flash(f"Beca de {datos['porcentaje_beca']} %" + (": no paga mensualidad." if datos["porcentaje_beca"] == 100 else "."), "ok")
                 return redirect(url_for("alumnos.ficha", id_alumno=id_guardado))
             except ErrorDatos as e:
                 flash(str(e), "error")

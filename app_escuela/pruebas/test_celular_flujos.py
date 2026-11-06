@@ -179,14 +179,29 @@ class PruebasPantallasCompactas(PruebaConBaseQueSeDeshace):
         html = self.dueno.get(f"/caja/mensualidades/{m['id_mensualidad']}/cobrar").get_data(as_text=True)
         self.assertEqual(html.count('type="radio" name="id_metodo_pago"'), self.contar("METODO_PAGO WHERE estado = 'ACTIVO'"))
 
-    def test_inicio_recuerda_generar_el_mes(self):
+    def test_al_inscribir_ya_tiene_su_mensualidad_y_boton_cobrar(self):
+        from datos import alumnos, pagos
+        a = consultar_uno("""SELECT TOP 1 a.id_alumno FROM ALUMNO a WHERE a.estado = 'ACTIVO' AND a.porcentaje_beca < 100
+            AND NOT EXISTS (SELECT 1 FROM INSCRIPCION i WHERE i.id_alumno = a.id_alumno AND i.estado = 'ACTIVA')""")
+        if not a:
+            self.skipTest("No hay alumnos sin grupo.")
+        grupo = alumnos.grupo_para_edad(consultar_uno("SELECT fecha_nacimiento FROM ALUMNO WHERE id_alumno = ?",
+                                                       (a["id_alumno"],))["fecha_nacimiento"])
+        if not grupo:
+            self.skipTest("No hay grupo con cupo para esa edad.")
+        alumnos.inscribir(a["id_alumno"], grupo["id_grupo"], date.today())
+        m = pagos.primera_con_saldo([a["id_alumno"]]).get(a["id_alumno"])
+        self.assertIsNotNone(m, "la mensualidad del mes se crea al inscribir")
+        html = self.dueno.get(f"/alumnos/{a['id_alumno']}").get_data(as_text=True)
+        self.assertIn(f"/caja/mensualidades/{m['id_mensualidad']}/cobrar", html)
+
+    def test_el_mes_se_crea_solo(self):
         from datos import pagos
+        pagos._mes_listo = None
+        self.dueno.get("/")
         r = pagos.resumen_periodo(pagos.periodo_actual())
-        t = texto(self.dueno.get("/notificaciones"))
-        if r["activas"] > r["ya_generadas"]:
-            self.assertIn(f"Mensualidades de {pagos.periodo_actual()} sin generar", t)
-        else:
-            self.assertNotIn(f"Mensualidades de {pagos.periodo_actual()} sin generar", t)
+        self.assertEqual(r["activas"], r["ya_generadas"], "al entrar, todas las inscripciones tienen la mensualidad del mes")
+        self.assertNotIn("sin generar", texto(self.dueno.get("/notificaciones")))
 
     def test_lista_de_alumnos_corta_con_ver_todos(self):
         total = self.contar("ALUMNO")

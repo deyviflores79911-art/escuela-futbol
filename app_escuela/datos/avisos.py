@@ -104,13 +104,6 @@ def notificaciones(es_dueno, id_entrenador=None, hoy=None):
                            "enlace": "reportes.mi_grupo", "texto_enlace": "Ver mi grupo", "nivel": "aviso"})
 
     if es_dueno:
-        mes = pagos.periodo_actual()
-        r = pagos.resumen_periodo(mes)
-        faltan = (r["activas"] or 0) - (r["ya_generadas"] or 0)
-        if faltan > 0:
-            avisos.append({"id": f"mes:{mes}", "icono": "billetera", "titulo": f"Mensualidades de {mes} sin generar",
-                           "detalle": f"{faltan} pendiente{'s' if faltan != 1 else ''}. Mientras no se generen, ese mes nadie aparece en Deudores.",
-                           "enlace": "caja.mensualidades", "texto_enlace": "Generar", "nivel": "aviso"})
         llenos = [g for g in listar_grupos(solo_activos=True) if g["lleno"]]
         if llenos:
             avisos.append({"id": f"lleno:{_huella(g['id_grupo'] for g in llenos)}", "icono": "personas",

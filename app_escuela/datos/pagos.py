@@ -105,6 +105,21 @@ def generar_mensualidades(periodo, fecha_emision, fecha_vencimiento):
         return cur.rowcount, omitidas
 
 
+_mes_listo = None   # último día en que ya se revisó el mes en curso (en este proceso)
+
+
+def asegurar_mes_actual(hoy=None):
+    """Las mensualidades del mes se crean solas: la primera página del día crea las que falten del mes en curso."""
+    global _mes_listo
+    hoy = hoy or date.today()
+    if _mes_listo == hoy:
+        return 0
+    periodo = hoy.strftime("%Y-%m")
+    creadas, _ = generar_mensualidades(periodo, *fechas_propuestas(periodo))
+    _mes_listo = hoy
+    return creadas
+
+
 def periodos_generados():
     """Cada periodo con cuántas mensualidades tiene, cuántas están cubiertas y cuánto falta cobrar."""
     filas = consultar(
