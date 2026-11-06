@@ -10,7 +10,6 @@ from datetime import date
 from datos import pagos
 from datos.bd import consultar_uno
 from pruebas.ayuda import PruebaConBaseQueSeDeshace, cliente_como
-from pruebas.test_etapa2 import texto
 from pruebas.test_etapa3 import AyudaCaja
 
 
