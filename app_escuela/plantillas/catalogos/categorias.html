@@ -7,32 +7,31 @@
 <div class="barra-titulo">
   <div>
     <h1>Categorías</h1>
-    <p class="subtitulo">Rangos de edad de la escuela. Cada grupo pertenece a una categoría.</p>
   </div>
   <a class="boton" href="{{ url_for('catalogos.categoria_form') }}">{{ icono('mas') }} Nueva categoría</a>
 </div>
 {% if categorias %}
-<div class="tabla-envoltura"><table class="tabla">
-  <thead><tr><th>Categoría</th><th>Edades</th><th>Grupos activos</th><th>Estado</th><th>Acciones</th></tr></thead>
-  <tbody>
+<ul class="lista-filas">
   {% for c in categorias %}
-    {% set activa = c.estado == 'ACTIVA' %}
-    <tr>
-      <td><strong>{{ c.nombre }}</strong></td>
-      <td>{{ c.edad_minima }} a {{ c.edad_maxima }} años</td>
-      <td>{{ c.grupos }}</td>
-      <td>{% if activa %}<span class="estado estado-ok">{{ icono('check') }} Activa</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivada</span>{% endif %}</td>
-      <td class="acciones">
+  {% set activa = c.estado == 'ACTIVA' %}
+  <li class="fila-plegable{{ ' inactivo' if not activa }}">
+    <details>
+      <summary>
+        <div class="fila-principal"><strong>{{ c.nombre }}</strong>
+          <small>{{ c.edad_minima }} a {{ c.edad_maxima }} años · {{ c.grupos }} grupo{{ 's' if c.grupos != 1 }}</small></div>
+        {% if not activa %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Desactivada</span></div>{% endif %}
+      </summary>
+      <div class="fila-detalle botones">
         <a class="boton boton-claro boton-chico" href="{{ url_for('catalogos.categoria_form', id_categoria=c.id_categoria) }}">Editar</a>
         <form method="post" action="{{ url_for('catalogos.categoria_estado', id_categoria=c.id_categoria) }}" class="en-linea"
               data-confirmar="{{ '¿Desactivar la categoría ' ~ c.nombre ~ '?' if activa else '¿Activar la categoría ' ~ c.nombre ~ '?' }}">
           {{ csrf() }}<button class="boton boton-chico {{ 'boton-peligro' if activa else 'boton-claro' }}">{{ 'Desactivar' if activa else 'Activar' }}</button>
         </form>
-      </td>
-    </tr>
+      </div>
+    </details>
+  </li>
   {% endfor %}
-  </tbody>
-</table></div>
+</ul>
 {% else %}
 <div class="tarjeta vacio">
   <p>Todavía no hay categorías. Crea la primera (por ejemplo Sub-10, de 9 a 10 años).</p>

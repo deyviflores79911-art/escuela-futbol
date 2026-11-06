@@ -24,12 +24,12 @@
   <section class="tarjeta">
     <h2>Alumnos a su cargo ({{ t.alumnos|length }})</h2>
     {% if t.alumnos %}
-      <ul class="lista-simple">
+      <ul class="lista-filas">
       {% for a in t.alumnos %}
-        <li><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">{{ a.nombres }} {{ a.apellidos or '' }}</a>
-            <span class="ayuda">{{ a.codigo }}{{ ' · desactivado' if a.estado != 'ACTIVO' }}</span></li>
+      <li><a class="fila-principal" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong>
+        <small>{{ a.codigo }}{{ ' · desactivado' if a.estado != 'ACTIVO' }}</small></a></li>
       {% endfor %}
-      </ul>
+    </ul>
     {% else %}<p class="vacio">Todavía no tiene alumnos registrados.</p>{% endif %}
   </section>
 </div>

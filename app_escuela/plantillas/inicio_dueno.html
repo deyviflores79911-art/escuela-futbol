@@ -6,8 +6,7 @@
 {% set faltan_mes = (mes_resumen.activas or 0) - (mes_resumen.ya_generadas or 0) %}
 {% if faltan_mes > 0 %}
 <a class="mensaje mensaje-aviso aviso-enlace" href="{{ url_for('caja.mensualidades', periodo=mes) }}">
-  {{ icono('billetera') }}<span><strong>{{ 'Falta generar' if mes_resumen.ya_generadas else 'Todavía no generaste' }} las mensualidades de {{ mes }}</strong>
-  ({{ faltan_mes }} alumno{{ 's' if faltan_mes != 1 }}). Sin eso, este mes nadie aparece en Deudores.</span>{{ icono('flecha') }}</a>
+  {{ icono('billetera') }}<span><strong>Generar las mensualidades de {{ mes }}</strong> · {{ faltan_mes }} pendiente{{ 's' if faltan_mes != 1 }}</span>{{ icono('flecha') }}</a>
 {% endif %}
 {% if fuera_de_edad %}
 <details class="mensaje mensaje-error aviso-plegable">

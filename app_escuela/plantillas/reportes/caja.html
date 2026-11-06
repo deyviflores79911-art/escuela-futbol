@@ -5,24 +5,25 @@
 {% block contenido %}
 {{ pestanas([('reportes.deudores', 'Deudores'), ('reportes.caja', 'Resumen de caja')]) }}
 <h1>Resumen de caja</h1>
-<p class="subtitulo">Lo cobrado en un día o en un periodo, con el subtotal por método de pago. Los pagos anulados no se suman.</p>
 
-<form class="tarjeta filtros filtros-caja" method="get">
-  <div class="campo"><label for="desde">Desde</label><input id="desde" name="desde" type="date" value="{{ r.desde.isoformat() }}" required></div>
-  <div class="campo"><label for="hasta">Hasta</label><input id="hasta" name="hasta" type="date" value="{{ r.hasta.isoformat() }}" required></div>
-  <div class="botones"><button class="boton">Ver</button></div>
-  <p class="atajos">
-    {% for nombre, d, h in atajos %}
-      <a class="chip-enlace {% if d == r.desde and h == r.hasta %}chip-activo{% endif %}" href="{{ url_for('reportes.caja', desde=d.isoformat(), hasta=h.isoformat()) }}">{{ nombre }}</a>
-    {% endfor %}
-  </p>
-</form>
+<nav class="atajos" aria-label="Periodo">
+  {% for nombre, d, h in atajos %}
+    <a class="chip-enlace {% if d == r.desde and h == r.hasta %}chip-activo{% endif %}" href="{{ url_for('reportes.caja', desde=d.isoformat(), hasta=h.isoformat()) }}">{{ nombre }}</a>
+  {% endfor %}
+</nav>
+<details class="tarjeta plegable">
+  <summary>Otras fechas · {{ r.desde|fecha }}{{ ' al ' ~ r.hasta|fecha if r.desde != r.hasta }}</summary>
+  <form class="filtros filtros-caja" method="get">
+    <div class="campo"><label for="desde">Desde</label><input id="desde" name="desde" type="date" value="{{ r.desde.isoformat() }}" required></div>
+    <div class="campo"><label for="hasta">Hasta</label><input id="hasta" name="hasta" type="date" value="{{ r.hasta.isoformat() }}" required></div>
+    <div class="botones"><button class="boton">Ver</button></div>
+  </form>
+</details>
 
 <div data-vivo="{{ refresco }}" id="caja-vivo" data-url-datos="{{ url_for('reportes.caja_api', desde=r.desde.isoformat(), hasta=r.hasta.isoformat()) }}">
   {% include '_actualizado.html' %}
   <div class="resumen-alertas">
     <section class="tarjeta">
-      <p class="tipo-grafico">Gráfico de barras horizontales</p>
       <h2>Cobrado por método</h2>
       <div class="grafico grafico-chico"><canvas id="grafico-caja" role="img" aria-label="Total cobrado por método de pago"></canvas></div>
     </section>

@@ -82,7 +82,7 @@
           </div>
         </div>
         {% if errores.porcentaje_beca %}<p class="error-campo">{{ errores.porcentaje_beca }}</p>{% endif %}
-        <p class="ayuda">0 = paga completo · 50 = paga la mitad · 100 = no paga (no se le generan mensualidades).</p>
+        <p class="ayuda">100 % = no paga.</p>
       </div>
       <details class="mas-datos" {% if id_alumno or errores.codigo or errores.direccion %}open{% endif %}>
         <summary>Código {{ form.get('codigo') or '' }} y dirección</summary>
@@ -90,7 +90,6 @@
           {{ campo('codigo', 'Código (único)', form.get('codigo'), errores=errores, requerido=true, extra='maxlength="20" pattern="[A-Za-z0-9-]{2,20}" title="Letras, números y guiones, por ejemplo AL-051"') }}
           {{ campo('direccion', 'Dirección', form.get('direccion'), errores=errores, extra='maxlength="200" placeholder="Igual que el tutor"') }}
         </div>
-        {% if not id_alumno %}<p class="ayuda">El código se pone solo (el siguiente libre). Si dejas la dirección vacía se usa la del tutor.</p>{% endif %}
       </details>
     </fieldset>
 

@@ -20,7 +20,7 @@
       <tr><td style="color:#555">Método</td><td align="right">{{ p.metodo }}</td></tr>
       <tr style="border-top:1px solid #ddd"><td><strong>Pagó</strong></td><td align="right"><strong style="font-size:20px">{{ p.monto|bs }}</strong></td></tr>
       <tr><td colspan="2" style="color:#555;font-size:13px">Son: {{ p.monto|letras }}</td></tr>
-      <tr><td colspan="2" style="font-size:14px">{% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: <strong>{{ p.saldo_mensualidad|bs }}</strong>{% else %}✅ Mensualidad pagada completa{% endif %}</td></tr>
+      <tr><td colspan="2" style="font-size:14px">{% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: <strong>{{ p.saldo_mensualidad|bs }}</strong>{% else %}Mensualidad pagada completa{% endif %}</td></tr>
     </table>
   </td></tr>
   <tr><td style="padding:12px 22px 20px;color:#555;font-size:12px">Recibo interno de la escuela: no es una factura. ¡Gracias!</td></tr>

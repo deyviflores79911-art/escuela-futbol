@@ -5,7 +5,6 @@
 {% block contenido %}
 {{ pestanas([('caja.caja', 'Cobrar'), ('caja.mensualidades', 'Mensualidades')]) }}
 <h1>Generar mensualidades</h1>
-<p class="subtitulo intro">Una mensualidad por cada inscripción activa, con el precio de su grupo (y su beca). Nunca se duplican.</p>
 
 {% set faltan = resumen.activas - resumen.ya_generadas %}
 <section class="tarjeta">

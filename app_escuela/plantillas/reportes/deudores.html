@@ -5,11 +5,10 @@
 {% block contenido %}
 {{ pestanas([('reportes.deudores', 'Deudores'), ('reportes.caja', 'Resumen de caja')]) }}
 <h1>Deudores</h1>
-<p class="subtitulo">Mensualidades con saldo pendiente, de la más atrasada a la menos atrasada.</p>
 
 {% if sin_mes_actual and periodo %}
-  <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>El mes actual ({{ mes_actual }}) todavía no tiene mensualidades
-    generadas: se muestra {{ periodo }}. Puedes generarlas en <a href="{{ url_for('caja.mensualidades') }}">Caja → Mensualidades</a>.</span></p>
+  <p class="mensaje mensaje-aviso">{{ icono('info') }}<span>{{ mes_actual }} todavía sin mensualidades: se muestra {{ periodo }}.
+    <a href="{{ url_for('caja.mensualidades') }}">Generar</a></span></p>
 {% endif %}
 
 <details class="tarjeta plegable" {% if categoria or request.args.get('periodo') %}open{% endif %}>

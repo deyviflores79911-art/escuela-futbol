@@ -29,8 +29,6 @@
       {{ campo('monto', 'Monto (Bs)', form.get('monto'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"') }}
       {{ campo('fecha_pago', 'Fecha de pago', form.get('fecha_pago'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy ~ '"') }}
     </div>
-    <p class="ayuda">Si paga el saldo completo, el pago queda <strong>Confirmado</strong>; si paga menos, queda
-      <strong>Parcial</strong> y el resto se cobra después.</p>
     <div class="campo">
       <span class="etiqueta">Enviar el recibo al tutor</span>
       <div class="opciones-envio">
@@ -41,7 +39,7 @@
           {% if not (correo_listo and m.tutor_correo) %}disabled{% elif form.get('enviar_correo') == 'si' %}checked{% endif %}>
           Correo <small>{{ m.tutor_correo or 'sin correo' }}</small></label>
       </div>
-      {% if not correo_listo %}<p class="ayuda">El correo se activa cuando se configure la cuenta de la escuela.</p>{% endif %}
+      
     </div>
     {% if pedir_confirmacion %}
       <label class="confirmacion">

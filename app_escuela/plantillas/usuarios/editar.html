@@ -4,7 +4,7 @@
 {% block contenido %}
 <section class="tarjeta">
   <h1>Editar a {{ u.nombres }} {{ u.apellidos or '' }}</h1>
-  <p class="ayuda">Correo: <strong>{{ u.correo }}</strong> (no se cambia: es el enlace con su ficha de entrenador).</p>
+  <p class="ayuda">{{ u.correo }}</p>
   <form method="post">
     {{ csrf() }}
     <div class="dos-columnas">

@@ -59,7 +59,6 @@
 <section class="tarjeta">
   {% set activos = inscritos|selectattr('estado', 'equalto', 'ACTIVA')|list %}
   <h2>Alumnos inscritos ({{ activos|length }})</h2>
-  <p class="ayuda">Para inscribir a alguien, abre su ficha en <a href="{{ url_for('alumnos.lista') }}">Alumnos</a>.</p>
   {% if inscritos %}
   <ul class="lista-filas">
     {% for i in inscritos %}

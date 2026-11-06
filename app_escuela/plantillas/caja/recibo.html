@@ -20,7 +20,7 @@
   <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a cobrar</a>
 </div>
 {% if p.estado != 'Anulado' and p.tutor_correo and not correo_listo %}
-<p class="ayuda no-imprimir">El envío por correo (a {{ p.tutor_correo }}) se activa cuando se configure el correo de la escuela.</p>
+
 {% endif %}
 
 {# Mismo formato que una factura, pero es un RECIBO: la escuela no tiene NIT y no puede emitir facturas #}
@@ -134,7 +134,6 @@
     {% endfor %}
     </tbody>
   </table></div>
-  <p class="ayuda">La auditoría no se puede borrar ni editar desde la app.</p>
 </section>
 {% endif %}
 {% endblock %}

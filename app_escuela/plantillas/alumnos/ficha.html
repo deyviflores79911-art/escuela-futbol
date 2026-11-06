@@ -93,7 +93,6 @@
     {% endfor %}
     </tbody>
   </table></div>
-  <p class="ayuda">Las bajas se conservan en el historial: no se borra nada.</p>
   {% else %}
     <p class="vacio">Todavía no está inscrito en ningún grupo.</p>
   {% endif %}
@@ -125,7 +124,6 @@
     </div>
     <div class="botones"><button class="boton">{{ icono('mas') }} Inscribir</button></div>
   </form>
-  <p class="ayuda">Los grupos llenos aparecen desactivados en la lista: el sistema no inscribe si no hay cupo.</p>
   {% else %}
     <p class="vacio">No hay grupos con cupo libre donde inscribirlo{{ ' (ya está en todos los que tienen cupo)' if grupos|selectattr('ya_inscrito')|list }}.</p>
   {% endif %}

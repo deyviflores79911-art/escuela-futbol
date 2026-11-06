@@ -693,6 +693,7 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
   .botones > .boton, .botones > form { flex: 1 1 auto; width: auto; }
   .botones > .boton:first-child:not(.boton-claro):not(.boton-peligro), .botones > .boton-whatsapp { flex-basis: 100%; }
   .botones form .boton { width: 100%; }
+  .accion-fija.botones > .boton:first-child:not(.boton-claro):not(.boton-peligro) { flex-basis: auto; flex-grow: 2; }   /* Guardar y Cancelar, lado a lado */
   /* Datos "título: valor" en una sola línea */
   .datos { grid-template-columns: minmax(6.5rem, 42%) minmax(0, 1fr); gap: .35rem .75rem; }
   .datos dd { margin-bottom: 0; }

@@ -5,7 +5,7 @@
 {% block contenido %}
 <div class="barra-titulo">
   <div>
-    <h1>Usuarios entrenadores</h1>
+    <h1>Entrenadores</h1>
     {% set activos = entrenadores|selectattr('estado', 'equalto', 'ACTIVO')|list|length %}
     <p class="subtitulo">{{ activos }} activo{{ 's' if activos != 1 }} de {{ entrenadores|length }}</p>
   </div>
@@ -13,38 +13,30 @@
 </div>
 
 {% if entrenadores %}
-<div class="tabla-envoltura">
-<table class="tabla">
-  <thead>
-    <tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Especialidad</th><th>Estado</th><th>Acciones</th></tr>
-  </thead>
-  <tbody>
+<ul class="lista-filas">
   {% for e in entrenadores %}
-    {% set activo = e.estado == 'ACTIVO' %}
-    <tr>
-      <td>{{ e.nombres }} {{ e.apellidos or '' }}</td>
-      <td>{{ e.correo }}</td>
-      <td>{{ e.telefono or '—' }}</td>
-      <td>{{ e.especialidad or ('Sin ficha de entrenador' if not e.id_entrenador else '—') }}</td>
-      <td>
-        {% if activo %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>
-        {% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}
-      </td>
-      <td class="acciones">
-        <a class="boton boton-claro boton-chico" href="{{ url_for('usuarios.editar', id_usuario=e.id_usuario) }}">Editar</a>
-        <form method="post" action="{{ url_for('usuarios.cambiar_estado', id_usuario=e.id_usuario) }}" class="en-linea"
-              data-confirmar="{{ ('¿Desactivar a ' ~ e.nombres ~ '? Ya no podrá entrar al sistema.') if activo else ('¿Activar de nuevo a ' ~ e.nombres ~ '?') }}">
-          {{ csrf() }}
-          <button type="submit" class="boton boton-chico {{ 'boton-peligro' if activo else 'boton-claro' }}">
-            {{ 'Desactivar' if activo else 'Activar' }}
-          </button>
-        </form>
-      </td>
-    </tr>
+  {% set activo = e.estado == 'ACTIVO' %}
+  <li class="fila-plegable{{ ' inactivo' if not activo }}">
+    <details>
+      <summary>
+        <div class="fila-principal"><strong>{{ e.nombres }} {{ e.apellidos or '' }}</strong>
+          <small>{{ e.especialidad or ('Sin ficha de entrenador' if not e.id_entrenador else 'Entrenador') }}{{ ' · ' ~ e.telefono if e.telefono }}</small></div>
+        {% if not activo %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span></div>{% endif %}
+      </summary>
+      <div class="fila-detalle">
+        <dl class="datos"><dt>Correo</dt><dd>{{ e.correo }}</dd><dt>Teléfono</dt><dd>{{ e.telefono or '—' }}</dd></dl>
+        <div class="botones">
+          <a class="boton boton-claro boton-chico" href="{{ url_for('usuarios.editar', id_usuario=e.id_usuario) }}">Editar</a>
+          <form method="post" action="{{ url_for('usuarios.cambiar_estado', id_usuario=e.id_usuario) }}" class="en-linea"
+                data-confirmar="{{ ('¿Desactivar a ' ~ e.nombres ~ '? Ya no podrá entrar al sistema.') if activo else ('¿Activar de nuevo a ' ~ e.nombres ~ '?') }}">
+            {{ csrf() }}<button type="submit" class="boton boton-chico {{ 'boton-peligro' if activo else 'boton-claro' }}">{{ 'Desactivar' if activo else 'Activar' }}</button>
+          </form>
+        </div>
+      </div>
+    </details>
+  </li>
   {% endfor %}
-  </tbody>
-</table>
-</div>
+</ul>
 {% else %}
 <div class="tarjeta vacio">
   <p>Todavía no hay usuarios entrenadores. Crea el primero para que pueda ver su grupo.</p>

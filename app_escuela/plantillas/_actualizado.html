@@ -1,7 +1,6 @@
-{# Línea "Actualizado hace X" de las pantallas en vivo (va dentro de la zona data-vivo) #}
+{# Hora de la última actualización de las pantallas en vivo (va dentro de la zona data-vivo) #}
 <div class="actualizado">
-  <span>Datos en vivo de la base · actualizado <strong data-hace>hace un momento</strong>
-    ({{ ahora.strftime('%H:%M:%S') }}) · se actualiza solo cada {{ refresco }} s</span>
+  <span>Actualizado <strong data-hace>hace un momento</strong> · {{ ahora.strftime('%H:%M') }}</span>
   <button type="button" class="boton boton-claro boton-chico" data-actualizar>Actualizar</button>
-  <span class="error-campo" data-sin-conexion hidden>No se pudo actualizar (sin conexión o sesión cerrada). Recarga la página.</span>
+  <span class="error-campo" data-sin-conexion hidden>Sin conexión. Recarga la página.</span>
 </div>

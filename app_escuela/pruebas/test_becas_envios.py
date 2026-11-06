@@ -119,7 +119,6 @@ class PruebasEnvioRecibo(AyudaCaja, PruebaConBaseQueSeDeshace):
     def test_sin_cuenta_de_correo_la_opcion_esta_desactivada(self):
         _, pagina = self.cobrar_con()
         self.assertRegex(pagina, r'name="enviar_correo" value="si"\s+disabled')
-        self.assertIn("El correo se activa cuando se configure", pagina)
 
     def test_con_cuenta_de_correo_se_envia_al_tutor(self):
         with self.con_correo(), mock.patch("smtplib.SMTP", _SMTPFalso):

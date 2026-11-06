@@ -3,7 +3,6 @@
 {% block titulo %}Mi grupo{% endblock %}
 {% block contenido %}
 <h1>Mi grupo</h1>
-<p class="subtitulo">Tus alumnos, tus horarios y quién está al día. No se muestran montos ni métodos de pago.</p>
 
 <div data-vivo="{{ refresco }}">
   {% include '_actualizado.html' %}
@@ -52,7 +51,6 @@
     {% if g.alumnos %}
     {% set fuera = g.alumnos|selectattr('fuera_de_edad')|list|length %}
     {% if fuera %}<p class="ayuda">{{ icono('alerta') }} {{ fuera }} alumno{{ 's' if fuera != 1 }} con edad fuera de {{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años). Avisa al dueño para cambiarlo{{ 's' if fuera != 1 }} de grupo.</p>{% endif %}
-    <p class="ayuda">"Debe" = tiene saldo en alguna mensualidad ya vencida. Recuérdaselo al tutor; los cobros los registra el dueño.</p>
     {% else %}
       <p class="vacio">Todavía no hay alumnos inscritos en este grupo.</p>
     {% endif %}
