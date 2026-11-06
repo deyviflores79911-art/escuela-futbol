@@ -12,7 +12,7 @@
   {% if p.tutor_correo %}
   <form method="post" action="{{ url_for('caja.enviar_correo', id_pago=p.id_pago) }}" class="en-linea">
     {{ csrf() }}
-    <button class="boton boton-claro" {% if not correo_listo %}disabled title="Falta configurar el correo de la escuela"{% endif %}>Enviar por correo</button>
+    <button class="boton boton-claro" {% if not correo_listo %}disabled{% endif %}>{{ 'Enviar por correo' if correo_listo else 'Correo: sin configurar' }}</button>
   </form>
   {% endif %}
   {% endif %}

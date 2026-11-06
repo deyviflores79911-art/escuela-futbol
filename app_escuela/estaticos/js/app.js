@@ -256,12 +256,17 @@ document.querySelectorAll("[data-beca]").forEach(function (b) {
   b.addEventListener("click", function () { document.getElementById("porcentaje_beca").value = b.dataset.beca; });
 });
 
-// Recibo recién cobrado con "Enviar por WhatsApp" marcado: se abre WhatsApp con el mensaje listo
+// Recibo recién cobrado con "Enviar por WhatsApp" marcado: WhatsApp se abre APARTE (la app queda en el recibo).
+// Si el navegador no deja abrirlo solo, el botón verde queda resaltado para tocarlo.
 (function () {
   var enlace = document.querySelector("[data-abrir-solo]");
   if (!enlace) return;
   try { history.replaceState(null, "", location.pathname); } catch (e) {}   // al volver atrás no se abre otra vez
-  setTimeout(function () { window.location.href = enlace.href; }, 700);
+  enlace.classList.add("resaltado");
+  var ventana = null;
+  try { ventana = window.open(enlace.href, "_blank"); } catch (e) {}
+  if (ventana) { try { ventana.opener = null; } catch (e) {} }
+  else { enlace.focus(); }
 })();
 
 // Búsqueda mientras se escribe: <form data-busqueda-vivo="#resultados">. Pide la misma página con lo escrito

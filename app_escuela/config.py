@@ -33,8 +33,8 @@ FALTAN = [v for v in VARIABLES_NUBE if not os.environ.get(v)] if EN_LA_NUBE else
 
 # ---- Correo para mandar el recibo al tutor. Mientras falten estas variables, la opción aparece desactivada.
 # Con Gmail: CORREO_USUARIO = la cuenta de la escuela y CORREO_CLAVE = una "contraseña de aplicación" de Google.
-CORREO_USUARIO = os.environ.get("CORREO_USUARIO", "")
-CORREO_CLAVE = os.environ.get("CORREO_CLAVE", "")
+CORREO_USUARIO = os.environ.get("CORREO_USUARIO", "").strip()
+CORREO_CLAVE = os.environ.get("CORREO_CLAVE", "").replace(" ", "")   # Google la muestra con espacios: se quitan
 CORREO_SERVIDOR = os.environ.get("CORREO_SERVIDOR", "smtp.gmail.com")
 CORREO_PUERTO = int(os.environ.get("CORREO_PUERTO", "587"))
 

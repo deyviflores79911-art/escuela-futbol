@@ -138,6 +138,32 @@ class PruebasEnvioRecibo(AyudaCaja, PruebaConBaseQueSeDeshace):
             r = enviar(self.dueno, f"/pagos/{p['id_pago']}/enviar-correo", {}, desde=f"/pagos/{p['id_pago']}/recibo")
             self.assertEqual(len(_SMTPFalso.enviados), 2)
 
+    def test_el_correo_lleva_el_recibo_completo_con_el_escudo(self):
+        with self.con_correo(), mock.patch("smtplib.SMTP", _SMTPFalso):
+            self.cobrar_con(enviar_correo="si")
+        msg = _SMTPFalso.enviados[0]
+        p = self.ultimo_pago()
+        html = msg.get_body(("html",)).get_content()
+        self.assertIn(p["numero_recibo"], html)
+        self.assertIn("Bs 10,00", html)
+        self.assertIn('src="cid:escudo"', html)
+        imagenes = [parte for parte in msg.walk() if parte.get_content_maintype() == "image"]
+        self.assertEqual(len(imagenes), 1, "el escudo va adjunto dentro del correo")
+        self.assertIn("RECIBO " + p["numero_recibo"], msg.get_body(("plain",)).get_content())
+        self.assertIn("Escuela de Fútbol", msg["From"])
+
+    def test_si_falla_el_correo_el_pago_igual_queda_guardado(self):
+        class SMTPQueFalla(_SMTPFalso):
+            def login(self, usuario, clave):
+                import smtplib
+                raise smtplib.SMTPAuthenticationError(535, b"clave incorrecta")
+        antes = self.contar("PAGO")
+        with self.con_correo(), mock.patch("smtplib.SMTP", SMTPQueFalla):
+            r, _ = self.cobrar_con(enviar_correo="si")
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.contar("PAGO"), antes + 1, "el pago se guarda aunque el correo falle")
+        self.assertIn("No se pudo enviar el correo", texto(self.dueno.get(r.headers["Location"])))
+
     def test_whatsapp_marcado_abre_el_mensaje_listo(self):
         r, _ = self.cobrar_con(enviar_whatsapp="si")
         self.assertIn("whatsapp=1", r.headers["Location"])

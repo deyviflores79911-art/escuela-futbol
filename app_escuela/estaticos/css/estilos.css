@@ -517,6 +517,7 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
 .boton-icono { padding: 0; width: 44px; height: 44px; justify-content: center; }
 .boton-icono .icono { width: 22px; height: 22px; }
 .boton-whatsapp { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+.boton-whatsapp.resaltado { box-shadow: 0 0 0 4px rgba(31, 157, 85, .35); }
 
 /* Secciones plegadas (historial, filtros, horarios): se abren al tocar */
 .plegable > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
