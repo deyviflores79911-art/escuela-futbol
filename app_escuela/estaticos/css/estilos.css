@@ -670,6 +670,33 @@ a.fila-principal:hover strong { text-decoration: underline; text-decoration-colo
   .calor th[scope="row"] { padding-left: .5rem; }
   .fila-anulada td { text-decoration: none; }
   .fila-anulada td:first-child { text-decoration: line-through; }
+
+  /* ===== Más compacto: menos cuadros gigantes en el celular ===== */
+  /* Botones: el principal a lo ancho y los demás lado a lado (antes, todos apilados a lo ancho) */
+  .botones { flex-direction: row; flex-wrap: wrap; }
+  .botones > .boton, .botones > form { flex: 1 1 auto; width: auto; }
+  .botones > .boton:first-child:not(.boton-claro):not(.boton-peligro), .botones > .boton-whatsapp { flex-basis: 100%; }
+  .botones form .boton { width: 100%; }
+  /* Datos "título: valor" en una sola línea */
+  .datos { grid-template-columns: minmax(6.5rem, 42%) minmax(0, 1fr); gap: .35rem .75rem; }
+  .datos dd { margin-bottom: 0; }
+  /* Números resumen en fila y más chicos */
+  .indicadores { grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: .5rem; }
+  .indicador { padding: .6rem .75rem; border-top-width: 4px; }
+  .indicador .valor { font-size: 1.45rem; }
+  .indicador span:last-child { font-size: .8rem; line-height: 1.25; }
+  /* Inicio: tarjetas de acción más bajas (ícono al lado del nombre) */
+  .accion-grande { min-height: 84px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .6rem; align-content: center; padding: .75rem; }
+  .accion-grande .icono { grid-row: 1 / 3; width: 28px; height: 28px; margin: 0; align-self: center; }
+  .accion-nombre { font-size: 1.15rem; }
+  .accion-ancha { min-height: 84px; }
+  /* Secciones plegadas, avisos y "actualizado": menos espacio */
+  details.tarjeta.plegable { padding: .55rem 1rem; }
+  .mensaje { padding: .6rem .8rem; font-size: .95rem; }
+  .actualizado { font-size: .8rem; gap: .35rem .75rem; margin-bottom: .6rem; }
+  .actualizado .boton { min-height: 36px; padding: .2rem .75rem; font-size: .85rem; }
+  .tarjeta { padding: .95rem; }
+  h2 { font-size: 1.15rem; }
 }
 
 /* Celular con la app instalada: sin animación de entrada (se siente más rápida) */
