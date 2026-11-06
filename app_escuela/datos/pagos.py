@@ -56,9 +56,10 @@ def resumen_periodo(periodo):
     return consultar_uno(
         """SELECT COUNT(*) AS activas, ISNULL(SUM(CASE WHEN x.n > 0 THEN 1 ELSE 0 END), 0) AS ya_generadas
            FROM INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo
+           JOIN ALUMNO a ON a.id_alumno = i.id_alumno
            OUTER APPLY (SELECT COUNT(*) AS n FROM MENSUALIDAD m
                         WHERE m.id_inscripcion = i.id_inscripcion AND m.periodo = ?) x
-           WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO'""", (periodo,))
+           WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO' AND a.porcentaje_beca < 100""", (periodo,))
 
 
 def generar_mensualidades(periodo, fecha_emision, fecha_vencimiento):
@@ -80,9 +81,10 @@ def generar_mensualidades(periodo, fecha_emision, fecha_vencimiento):
         omitidas = cur.fetchone()[0]
         cur.execute(
             """INSERT INTO MENSUALIDAD (id_inscripcion, periodo, fecha_emision, fecha_vencimiento, monto, estado)
-               SELECT i.id_inscripcion, ?, ?, ?, g.precio_mensual, 'PENDIENTE'
+               SELECT i.id_inscripcion, ?, ?, ?, ROUND(g.precio_mensual * (100 - a.porcentaje_beca) / 100, 2), 'PENDIENTE'
                FROM INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo
-               WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO'
+               JOIN ALUMNO a ON a.id_alumno = i.id_alumno   -- beca: descuento en %; con 100 % no paga
+               WHERE i.estado = 'ACTIVA' AND g.estado = 'ACTIVO' AND a.porcentaje_beca < 100
                  AND NOT EXISTS (SELECT 1 FROM MENSUALIDAD m WITH (UPDLOCK, HOLDLOCK)
                                  WHERE m.id_inscripcion = i.id_inscripcion AND m.periodo = ?)""",
             (periodo, fecha_emision, fecha_vencimiento, periodo))
@@ -164,10 +166,12 @@ def mensualidades_de_alumno(id_alumno):
 def obtener_mensualidad(id_mensualidad):
     m = consultar_uno(
         f"""SELECT m.id_mensualidad, m.periodo, m.fecha_emision, m.fecha_vencimiento, m.monto, {PAGADO_SQL} AS pagado,
-                   a.id_alumno, a.codigo, a.nombres, a.apellidos, g.nombre AS grupo, c.nombre AS categoria
+                   a.id_alumno, a.codigo, a.nombres, a.apellidos, a.porcentaje_beca, g.nombre AS grupo, c.nombre AS categoria,
+                   ISNULL(t.whatsapp, t.telefono) AS tutor_celular, t.correo AS tutor_correo
             FROM MENSUALIDAD m
             JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
             JOIN ALUMNO a ON a.id_alumno = i.id_alumno
+            LEFT JOIN TUTOR t ON t.id_tutor = a.id_tutor
             JOIN GRUPO g ON g.id_grupo = i.id_grupo
             JOIN CATEGORIA c ON c.id_categoria = g.id_categoria
             WHERE m.id_mensualidad = ?""", (id_mensualidad,))
@@ -185,7 +189,7 @@ _SELECT_PAGO = """
            m.id_mensualidad, m.periodo, m.monto AS monto_mensualidad, m.fecha_vencimiento,
            a.id_alumno, a.codigo, a.nombres, a.apellidos,
            t.nombres + ' ' + ISNULL(t.apellidos, '') AS tutor, t.ci AS tutor_ci,
-           ISNULL(t.whatsapp, t.telefono) AS tutor_celular,
+           ISNULL(t.whatsapp, t.telefono) AS tutor_celular, t.correo AS tutor_correo,
            g.nombre AS grupo, c.nombre AS categoria,
            u.nombres + ' ' + ISNULL(u.apellidos, '') AS registrado_por
     FROM PAGO p

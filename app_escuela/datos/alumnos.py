@@ -91,7 +91,7 @@ def _guardar_tutor(cur, id_tutor, datos):
 
 _SELECT_ALUMNO = """
     SELECT a.id_alumno, a.codigo, a.nombres, a.apellidos, a.fecha_nacimiento, a.sexo, a.direccion,
-           a.estado, a.fecha_registro, a.id_tutor,
+           a.estado, a.fecha_registro, a.id_tutor, a.porcentaje_beca,
            t.nombres AS tutor_nombres, t.apellidos AS tutor_apellidos, t.ci AS tutor_ci,
            t.telefono AS tutor_telefono, t.whatsapp AS tutor_whatsapp,
            (SELECT STRING_AGG(g.nombre, ', ') FROM INSCRIPCION i JOIN GRUPO g ON g.id_grupo = i.id_grupo
@@ -117,7 +117,9 @@ def buscar_alumnos(texto=None, estado=None):
                            "(a.nombres + ' ' + ISNULL(a.apellidos, '')) LIKE ? OR "
                            "t.nombres LIKE ? OR t.apellidos LIKE ? OR t.ci LIKE ?)")
         params += [patron] * 7
-    if estado:
+    if estado == "BECADO":
+        condiciones.append("a.porcentaje_beca > 0")
+    elif estado:
         condiciones.append("a.estado = ?")
         params.append(estado)
     donde = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
@@ -163,7 +165,7 @@ def guardar_alumno(id_alumno, datos, tutor_nuevo=None, inscribir_en=None):
     datos = dict(datos, codigo=datos["codigo"].strip().upper())
     if not re.fullmatch(r"[A-Z0-9-]{2,20}", datos["codigo"]):
         raise ErrorDatos("El código solo puede tener letras, números y guiones (por ejemplo AL-051).")
-    campos = ("id_tutor", "codigo", "nombres", "apellidos", "fecha_nacimiento", "sexo", "direccion")
+    campos = ("id_tutor", "codigo", "nombres", "apellidos", "fecha_nacimiento", "sexo", "direccion", "porcentaje_beca")
     with transaccion() as cur:
         if tutor_nuevo:
             datos["id_tutor"] = _guardar_tutor(cur, None, tutor_nuevo)
@@ -207,11 +209,34 @@ def guardar_alumno(id_alumno, datos, tutor_nuevo=None, inscribir_en=None):
                 raise ErrorDatos("Ese alumno no existe.")
             return id_alumno
         cur.execute(f"INSERT INTO ALUMNO ({', '.join(campos)}, estado) OUTPUT INSERTED.id_alumno "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVO')", valores)
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')", valores)
         nuevo_id = cur.fetchone()[0]
         if inscribir_en:
             _inscribir(cur, nuevo_id, *inscribir_en)
         return nuevo_id
+
+
+def cambiar_beca(id_alumno, porcentaje, aplicar_desde=None):
+    """
+    Pone la beca (0 a 100 %) a un alumno ya registrado. Las mensualidades que se generen desde ahora ya salen con
+    el descuento. Si viene aplicar_desde='aaaa-mm', también se recalculan las mensualidades de ese mes en adelante
+    que todavía no tienen ningún pago (las pagadas o con abonos no se tocan). Devuelve cuántas se recalcularon.
+    """
+    with transaccion() as cur:
+        cur.execute("UPDATE ALUMNO SET porcentaje_beca = ? WHERE id_alumno = ?", (porcentaje, id_alumno))
+        if cur.rowcount == 0:
+            raise ErrorDatos("Ese alumno no existe.")
+        if not aplicar_desde:
+            return 0
+        cur.execute("""UPDATE m SET monto = ROUND(g.precio_mensual * (100 - ?) / 100, 2)
+                       FROM MENSUALIDAD m
+                       JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+                       JOIN GRUPO g ON g.id_grupo = i.id_grupo
+                       WHERE i.id_alumno = ? AND m.periodo >= ?
+                         AND NOT EXISTS (SELECT 1 FROM PAGO p JOIN ESTADO_PAGO e ON e.id_estado_pago = p.id_estado_pago
+                                         WHERE p.id_mensualidad = m.id_mensualidad AND e.nombre <> 'Anulado')""",
+                    (porcentaje, id_alumno, aplicar_desde))
+        return cur.rowcount
 
 
 def cambiar_estado_alumno(id_alumno):

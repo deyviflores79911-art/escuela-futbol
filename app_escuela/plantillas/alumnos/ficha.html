@@ -27,6 +27,7 @@
     <dl class="datos">
       <dt>Fecha de nacimiento</dt><dd>{{ a.fecha_nacimiento|fecha or '—' }}{% if a.edad is not none %} ({{ a.edad }} años){% endif %}</dd>
       <dt>Sexo</dt><dd>{{ sexos.get(a.sexo, '—') }}</dd>
+      <dt>Beca</dt><dd>{% if a.porcentaje_beca %}<strong>{{ a.porcentaje_beca|int }} %</strong>{{ ' (no paga)' if a.porcentaje_beca >= 100 }}{% else %}Sin beca{% endif %}</dd>
       <dt>Dirección</dt><dd>{{ a.direccion or '—' }}</dd>
       <dt>Registrado el</dt><dd>{{ a.fecha_registro|fecha }}</dd>
     </dl>
@@ -43,6 +44,30 @@
     {% else %}<p class="vacio">Sin tutor registrado.</p>{% endif %}
   </section>
 </div>
+
+<section class="tarjeta" id="beca">
+  <h2>Beca</h2>
+  <p>{% if a.porcentaje_beca %}Tiene <strong>{{ a.porcentaje_beca|int }} %</strong> de descuento{{ ' (no paga)' if a.porcentaje_beca >= 100 }}.
+     {% else %}No tiene beca: paga la mensualidad completa.{% endif %}</p>
+  <form method="post" action="{{ url_for('alumnos.beca', id_alumno=a.id_alumno) }}" data-confirmar="¿Guardar la beca de {{ a.nombres }}?">
+    {{ csrf() }}
+    <div class="campo">
+      <label for="porcentaje_beca">Beca (% de descuento)</label>
+      <div class="beca-fila">
+        <input id="porcentaje_beca" name="porcentaje_beca" type="number" min="0" max="100" step="1" inputmode="numeric"
+               value="{{ a.porcentaje_beca|int }}">
+        <div class="opciones-beca">
+          {% for v, t in [(0, 'Sin beca'), (25, '25 %'), (50, '50 %'), (100, '100 %')] %}
+          <button type="button" class="boton boton-claro boton-chico" data-beca="{{ v }}">{{ t }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <label class="confirmacion"><input type="checkbox" name="aplicar_mes" value="si" checked>
+      Aplicar también a las mensualidades de este mes en adelante que todavía no tienen pagos.</label>
+    <div class="botones"><button class="boton">Guardar beca</button></div>
+  </form>
+</section>
 
 <section class="tarjeta">
   <h2>Inscripciones</h2>

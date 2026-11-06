@@ -3,7 +3,7 @@ from datetime import date
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
-from datos import alumnos, catalogos
+from datos import alumnos, catalogos, pagos
 from datos.bd import ErrorDatos
 from rutas import validar
 from rutas.seguridad import destino_interno, solo_dueno
@@ -48,7 +48,7 @@ def inscribir_inicio():
 @solo_dueno
 def lista():
     q = (request.args.get("q") or "").strip()[:60]
-    estado = request.args.get("estado") if request.args.get("estado") in ("ACTIVO", "INACTIVO") else None
+    estado = request.args.get("estado") if request.args.get("estado") in ("ACTIVO", "INACTIVO", "BECADO") else None
     return render_template("alumnos/lista.html", alumnos=alumnos.buscar_alumnos(q, estado), q=q, estado=estado,
                            total=alumnos.contar_alumnos(), maximo=alumnos.MAX_RESULTADOS,
                            por_pagina=30, todos=request.args.get("todos") == "1")
@@ -91,6 +91,7 @@ def alumno_form(id_alumno):
             "sexo": validar.opcion(form, "sexo", errores, "el sexo", set(alumnos.SEXOS)),
             "direccion": validar.texto(form, "direccion", errores, "La dirección", obligatorio=False, maximo=200),
             "id_tutor": int(id_tutor) if id_tutor.isdigit() else None,
+            "porcentaje_beca": validar.entero(form, "porcentaje_beca", errores, "La beca", 0, 100, obligatorio=False) or 0,
         }
         if "sexo" in errores:
             errores["sexo"] = "Elige el sexo: Masculino o Femenino."
@@ -115,6 +116,9 @@ def alumno_form(id_alumno):
                     flash(f"{nombre} quedó registrado sin grupo: {sin_grupo}. Inscríbelo desde su ficha cuando haya cupo.", "aviso")
                 else:
                     flash(f"Alumno {nombre} guardado{inscrito}.", "ok")
+                if datos["porcentaje_beca"]:
+                    flash(f"Beca de {datos['porcentaje_beca']} %: se aplica a las mensualidades que se generen desde ahora"
+                          + (" (no se le generan: no paga)." if datos["porcentaje_beca"] == 100 else "."), "ok")
                 return redirect(url_for("alumnos.ficha", id_alumno=id_guardado))
             except ErrorDatos as e:
                 flash(str(e), "error")
@@ -131,6 +135,34 @@ def api_tutores():
     """Búsqueda rápida de tutores para el formulario de alumno (mientras se escribe)."""
     q = (request.args.get("q") or "").strip()[:60]
     return jsonify(alumnos.tutores_para_elegir(q) if len(q) >= 2 else [])
+
+
+@bp.route("/alumnos/<int:id_alumno>/beca", methods=["POST"])
+@solo_dueno
+def beca(id_alumno):
+    """Dar, cambiar o quitar la beca desde la ficha, en cualquier momento."""
+    a = validar.existe_o_404(alumnos.obtener_alumno(id_alumno))
+    errores = validar.Errores()
+    porcentaje = validar.entero(request.form, "porcentaje_beca", errores, "La beca", 0, 100, obligatorio=False) or 0
+    if errores:
+        flash(" ".join(errores.values()), "error")
+        return redirect(url_for("alumnos.ficha", id_alumno=id_alumno))
+    desde = pagos.periodo_actual() if request.form.get("aplicar_mes") == "si" else None
+    try:
+        recalculadas = alumnos.cambiar_beca(id_alumno, porcentaje, desde)
+    except ErrorDatos as e:
+        flash(str(e), "error")
+        return redirect(url_for("alumnos.ficha", id_alumno=id_alumno))
+    if porcentaje:
+        texto = f"{a['nombres']} tiene ahora beca de {porcentaje} %" + (" (no paga)" if porcentaje == 100 else "") + "."
+    else:
+        texto = f"Se quitó la beca de {a['nombres']}: paga la mensualidad completa."
+    if desde:
+        texto += f" Se recalcularon {recalculadas} mensualidad{'es' if recalculadas != 1 else ''} sin pagos desde {desde}."
+    else:
+        texto += " Se aplica a las mensualidades que se generen desde ahora."
+    flash(texto, "ok")
+    return redirect(url_for("alumnos.ficha", id_alumno=id_alumno))
 
 
 @bp.route("/alumnos/<int:id_alumno>/estado", methods=["POST"])

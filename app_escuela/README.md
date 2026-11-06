@@ -77,6 +77,30 @@ En la nube se activa sola cuando existe la variable `BD_SERVIDOR`.
 - El SSIS y `mineria_pagos.py` siguen leyendo la base de **esta computadora**. Para analizar los
   pagos hechos en la nube, el SSIS tendría que apuntar a Azure.
 
+## Enviar el recibo por correo (activarlo)
+El envío ya está programado; solo falta la cuenta desde la que se manda. Mientras no exista, la opción
+"Correo" aparece desactivada al cobrar y en el recibo.
+1. Usa un Gmail de la escuela. En su cuenta de Google activa la **verificación en 2 pasos** y crea una
+   **contraseña de aplicación** (Cuenta de Google → Seguridad → Contraseñas de aplicaciones). Son 16 letras.
+2. En Vercel → Settings → Environment Variables agrega:
+
+| Variable | Valor |
+|---|---|
+| `CORREO_USUARIO` | el Gmail de la escuela, por ejemplo `escuelafortaleza@gmail.com` |
+| `CORREO_CLAVE` | la contraseña de aplicación (las 16 letras, sin espacios) |
+
+3. **Deployments → ⋯ → Redeploy.** Para otro proveedor que no sea Gmail: `CORREO_SERVIDOR` y `CORREO_PUERTO`.
+
+WhatsApp no necesita configuración: al cobrar, si está marcado, se abre WhatsApp con el recibo ya escrito
+y solo se toca **Enviar** (WhatsApp no deja que una app mande mensajes sola sin su servicio de pago).
+
+## Becas
+Cada alumno puede tener una beca de 0 a 100 % (0 = paga completo, 50 = la mitad, 100 = no paga).
+Se pone al crearlo o, en cualquier momento, en su ficha → **Beca**. Las mensualidades que se generan
+después ya salen con el descuento; con 100 % no se le generan. Desde la ficha se puede aplicar también
+a las mensualidades de este mes en adelante que todavía no tienen pagos. En Alumnos, el filtro
+**Becados** muestra la lista. (Columna `ALUMNO.porcentaje_beca`, agregada en la base local y en Azure.)
+
 ## Poner o cambiar la contraseña de un usuario existente
 ```
 flask --app app definir-clave marco.admin@escuela.com

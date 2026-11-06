@@ -4,7 +4,7 @@
 {% block contenido %}
 <p class="miga"><a href="{{ url_for('caja.caja') }}">← Cobrar</a></p>
 <h1>{{ a.nombres }} {{ a.apellidos or '' }}</h1>
-<p class="subtitulo">{{ a.codigo }} · {{ a.grupos or 'Sin grupo activo' }} · Tutor: {{ a.tutor or '—' }}
+<p class="subtitulo">{{ a.codigo }} · {{ a.grupos or 'Sin grupo activo' }}{{ ' · Beca ' ~ a.porcentaje_beca|int ~ ' %' if a.porcentaje_beca }} · Tutor: {{ a.tutor or '—' }}
   {% if a.tutor_whatsapp or a.tutor_telefono %}({{ a.tutor_whatsapp or a.tutor_telefono }}){% endif %}</p>
 
 {# Lo primero que se ve: cuánto debe y el botón para cobrar la mensualidad más atrasada #}

@@ -8,7 +8,7 @@
   {# Lo justo para saber qué se cobra, en pocas líneas: los campos quedan a la vista #}
   <div class="resumen-cobro">
     <strong>{{ m.nombres }} {{ m.apellidos or '' }}</strong>
-    <span>Mes {{ m.periodo }} · {{ m.grupo }} · vence {{ m.fecha_vencimiento|fecha }}</span>
+    <span>Mes {{ m.periodo }} · {{ m.grupo }} · vence {{ m.fecha_vencimiento|fecha }}{{ ' · beca ' ~ m.porcentaje_beca|int ~ ' %' if m.porcentaje_beca }}</span>
     <span>Saldo <strong>{{ m.saldo|bs }}</strong>{% if m.pagado > 0 %} (ya pagó {{ m.pagado|bs }} de {{ m.monto|bs }}){% endif %}</span>
   </div>
 
@@ -31,6 +31,18 @@
     </div>
     <p class="ayuda">Si paga el saldo completo, el pago queda <strong>Confirmado</strong>; si paga menos, queda
       <strong>Parcial</strong> y el resto se cobra después.</p>
+    <div class="campo">
+      <span class="etiqueta">Enviar el recibo al tutor</span>
+      <div class="opciones-envio">
+        <label class="opcion-chip"><input type="checkbox" name="enviar_whatsapp" value="si"
+          {% if not m.tutor_celular %}disabled{% elif form.get('enviar_whatsapp') == 'si' %}checked{% endif %}>
+          WhatsApp <small>{{ m.tutor_celular or 'sin celular' }}</small></label>
+        <label class="opcion-chip"><input type="checkbox" name="enviar_correo" value="si"
+          {% if not (correo_listo and m.tutor_correo) %}disabled{% elif form.get('enviar_correo') == 'si' %}checked{% endif %}>
+          Correo <small>{{ m.tutor_correo or 'sin correo' }}</small></label>
+      </div>
+      {% if not correo_listo %}<p class="ayuda">El correo se activa cuando se configure la cuenta de la escuela.</p>{% endif %}
+    </div>
     {% if pedir_confirmacion %}
       <label class="confirmacion">
         <input type="checkbox" name="confirmar_exceso" value="si" required>

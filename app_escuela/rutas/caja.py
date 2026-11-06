@@ -14,7 +14,7 @@ from flask import (
 )
 
 import config
-from datos import alumnos, pagos
+from datos import alumnos, correo, pagos
 from datos.bd import ErrorDatos
 from rutas import validar
 from rutas.seguridad import solo_dueno
@@ -125,21 +125,27 @@ def cobrar(id_mensualidad):
                     confirmar_exceso=form.get("confirmar_exceso") == "si")
                 tipo = "pago completo" if estado == "Confirmado" else "pago parcial"
                 flash(f"Pago registrado: recibo {recibo} ({tipo}).", "ok")
-                return redirect(url_for("caja.recibo", id_pago=id_pago))
+                if form.get("enviar_correo") == "si" and correo.configurado():
+                    _enviar_recibo_por_correo(pagos.obtener_pago(id_pago))
+                # WhatsApp: el recibo se abre con el mensaje listo; el dueño solo toca Enviar
+                return redirect(url_for("caja.recibo", id_pago=id_pago,
+                                        whatsapp=1 if form.get("enviar_whatsapp") == "si" else None))
             except pagos.MontoMayorAlSaldo as e:
                 pedir_confirmacion = True
                 flash(str(e), "aviso")
             except ErrorDatos as e:
                 flash(str(e), "error")
     else:
-        form = {"monto": f"{m['saldo']:.2f}", "fecha_pago": date.today().isoformat()}
+        form = {"monto": f"{m['saldo']:.2f}", "fecha_pago": date.today().isoformat(),
+                "enviar_whatsapp": "si" if m["tutor_celular"] else "",
+                "enviar_correo": "si" if m["tutor_correo"] and correo.configurado() else ""}
     if m["saldo"] <= 0 and request.method == "GET":
         flash("Esa mensualidad ya está pagada.", "aviso")
         return redirect(url_for("caja.cuenta", id_alumno=m["id_alumno"]))
     return render_template("caja/cobrar.html", m=m, form=form, errores=errores,
                            metodos_opciones=[(x["id_metodo_pago"], x["nombre"]) for x in metodos],
                            pedir_confirmacion=pedir_confirmacion, clave_cobro=_nueva_clave_cobro(),
-                           hoy=date.today().isoformat())
+                           hoy=date.today().isoformat(), correo_listo=correo.configurado())
 
 
 # ---------------------------------------------------------------- Recibo y anulación (RF-15, RF-16, HU-09, HU-10)
@@ -149,7 +155,34 @@ def cobrar(id_mensualidad):
 def recibo(id_pago):
     p = validar.existe_o_404(pagos.obtener_pago(id_pago))
     return render_template("caja/recibo.html", p=p, escuela=config.ESCUELA,
-                           wa=alumnos.numero_whatsapp(p["tutor_celular"]) or "")
+                           wa=alumnos.numero_whatsapp(p["tutor_celular"]) or "",
+                           mensaje_wa=render_template("caja/_mensaje_recibo.txt", p=p, escuela=config.ESCUELA).strip(),
+                           abrir_whatsapp=request.args.get("whatsapp") == "1", correo_listo=correo.configurado())
+
+
+def _enviar_recibo_por_correo(p):
+    """Manda el recibo al correo del tutor. Si falla, el pago igual queda registrado: solo se avisa."""
+    if p["estado"] == "Anulado":
+        flash("Ese recibo está anulado: no se envía.", "aviso")
+        return False
+    try:
+        escudo = (config.CARPETA / "estaticos" / config.ESCUELA["escudo"]).read_bytes()
+        correo.enviar(p["tutor_correo"], f"Recibo {p['numero_recibo']} · {config.ESCUELA['nombre']}",
+                      render_template("caja/_mensaje_recibo.txt", p=p, escuela=config.ESCUELA),
+                      render_template("caja/recibo_correo.html", p=p, escuela=config.ESCUELA),
+                      imagen=("escudo", escudo, "png"))
+    except ErrorDatos as e:
+        flash(str(e), "aviso")
+        return False
+    flash(f"Recibo enviado por correo a {p['tutor_correo']}.", "ok")
+    return True
+
+
+@bp.route("/pagos/<int:id_pago>/enviar-correo", methods=["POST"])
+@solo_dueno
+def enviar_correo(id_pago):
+    _enviar_recibo_por_correo(validar.existe_o_404(pagos.obtener_pago(id_pago)))
+    return redirect(url_for("caja.recibo", id_pago=id_pago))
 
 
 @bp.route("/pagos/<int:id_pago>/anular", methods=["POST"])

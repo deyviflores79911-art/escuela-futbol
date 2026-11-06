@@ -5,6 +5,7 @@ Conexión a Sistema_EscuelasDeportivas.
 Reglas: siempre parámetros (?), nunca texto concatenado; lo que escribe
 más de una tabla va dentro de transaccion() (o todo o nada).
 """
+import time
 from contextlib import contextmanager, suppress
 
 import config
@@ -108,15 +109,19 @@ def cerrar_conexion(_error=None):
 
 def _abrir_nube():
     import pymssql
-    try:
-        # login_timeout amplio: la base gratis de Azure "se duerme" y tarda en despertar la primera vez
-        cn = pymssql.connect(server=config.BD_SERVIDOR, user=config.BD_USUARIO, password=config.BD_CLAVE,
-                             database=config.BD_NOMBRE, login_timeout=45, timeout=30, tds_version="7.4",
-                             encryption="require", autocommit=False)
-    except pymssql.Error as e:
-        raise ErrorBD("No se pudo conectar con la base de datos en la nube. "
-                      "Si la base estaba dormida, espera un minuto y recarga la página.") from e
-    return cn
+    # La base gratis de Azure "se duerme": mientras despierta responde el error 40613. Se reintenta sola.
+    for intento in range(5):
+        try:
+            return pymssql.connect(server=config.BD_SERVIDOR, user=config.BD_USUARIO, password=config.BD_CLAVE,
+                                   database=config.BD_NOMBRE, login_timeout=20, timeout=30, tds_version="7.4",
+                                   encryption="require", autocommit=False)
+        except pymssql.Error as e:
+            if "40613" in str(e) and intento < 4:
+                time.sleep(8)
+                continue
+            raise ErrorBD("No se pudo conectar con la base de datos en la nube. "
+                          "Si la base estaba dormida, espera un minuto y recarga la página.") from e
+    raise ErrorBD("La base de datos en la nube no respondió.")
 
 
 # ---------------------------------------------------------------- Consultas

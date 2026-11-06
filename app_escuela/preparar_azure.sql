@@ -38,8 +38,14 @@ JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.par
 WHERE dc.definition LIKE N'%getdate()%';
 EXEC sys.sp_executesql @sql;
 
+/* 3. Becas: porcentaje de descuento por alumno (0 = paga completo, 100 = no paga) */
+IF COL_LENGTH('dbo.ALUMNO', 'porcentaje_beca') IS NULL
+    EXEC sys.sp_executesql N'ALTER TABLE dbo.ALUMNO ADD porcentaje_beca DECIMAL(5,2) NOT NULL
+        CONSTRAINT DF_ALUMNO_porcentaje_beca DEFAULT 0
+        CONSTRAINT CK_ALUMNO_porcentaje_beca CHECK (porcentaje_beca >= 0 AND porcentaje_beca <= 100)';
+
 COMMIT TRANSACTION;
 
-/* 3. Revision: debe mostrar los 2 lugares y la hora actual de Bolivia */
+/* 4. Revision: debe mostrar los 2 lugares y la hora actual de Bolivia */
 SELECT nombre, enlace FROM dbo.LUGAR ORDER BY nombre;
 SELECT CAST(SYSDATETIMEOFFSET() AT TIME ZONE 'SA Western Standard Time' AS datetime) AS hora_bolivia;

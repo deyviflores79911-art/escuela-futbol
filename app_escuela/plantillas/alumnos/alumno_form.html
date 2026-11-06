@@ -70,6 +70,20 @@
         </div>
         {% if errores.sexo %}<p class="error-campo">{{ errores.sexo }}</p>{% endif %}
       </div>
+      <div class="campo">
+        <label for="porcentaje_beca">Beca (% de descuento)</label>
+        <div class="beca-fila">
+          <input id="porcentaje_beca" name="porcentaje_beca" type="number" min="0" max="100" step="1" inputmode="numeric"
+                 value="{{ (form.get('porcentaje_beca') or 0)|int }}" {% if errores.porcentaje_beca %}aria-invalid="true"{% endif %}>
+          <div class="opciones-beca">
+            {% for v, t in [(0, 'Sin beca'), (25, '25 %'), (50, '50 %'), (100, '100 %')] %}
+            <button type="button" class="boton boton-claro boton-chico" data-beca="{{ v }}">{{ t }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        {% if errores.porcentaje_beca %}<p class="error-campo">{{ errores.porcentaje_beca }}</p>{% endif %}
+        <p class="ayuda">0 = paga completo · 50 = paga la mitad · 100 = no paga (no se le generan mensualidades).</p>
+      </div>
       <details class="mas-datos" {% if id_alumno or errores.codigo or errores.direccion %}open{% endif %}>
         <summary>Código {{ form.get('codigo') or '' }} y dirección</summary>
         <div class="dos-columnas">

@@ -251,6 +251,19 @@ document.querySelectorAll(".form-horarios").forEach(function (f) {
   window.addEventListener("pageshow", limpiar);   // al volver atrás, sin aviso colgado
 })();
 
+// Beca: botones rápidos (Sin beca, 25 %, 50 %, 100 %) que llenan el campo
+document.querySelectorAll("[data-beca]").forEach(function (b) {
+  b.addEventListener("click", function () { document.getElementById("porcentaje_beca").value = b.dataset.beca; });
+});
+
+// Recibo recién cobrado con "Enviar por WhatsApp" marcado: se abre WhatsApp con el mensaje listo
+(function () {
+  var enlace = document.querySelector("[data-abrir-solo]");
+  if (!enlace) return;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}   // al volver atrás no se abre otra vez
+  setTimeout(function () { window.location.href = enlace.href; }, 700);
+})();
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {

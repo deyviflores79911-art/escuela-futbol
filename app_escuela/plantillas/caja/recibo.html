@@ -4,23 +4,24 @@
 {% block titulo %}Recibo {{ p.numero_recibo }}{% endblock %}
 {% block contenido %}
 <p class="miga no-imprimir"><a href="{{ url_for('caja.cuenta', id_alumno=p.id_alumno) }}">← Cuenta de {{ p.nombres }}</a></p>
-{# En la cancha no hay impresora: el recibo se manda por WhatsApp al tutor (resumen en texto) #}
-{% set mensaje_wa -%}
-{{ escuela.nombre }}
-RECIBO {{ p.numero_recibo }} · {{ p.fecha_pago|fecha }}
-Alumno: {{ p.nombres }} {{ p.apellidos or '' }} ({{ p.grupo }})
-Mensualidad {{ p.periodo }}: pagó {{ p.monto|bs }} ({{ p.metodo }})
-{% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: {{ p.saldo_mensualidad|bs }}{% else %}Mensualidad pagada completa ✅{% endif %}
-¡Gracias!
-{%- endset %}
+{# En la cancha no hay impresora: el recibo se manda al tutor por WhatsApp (mensaje listo) o por correo #}
 <div class="botones no-imprimir">
   {% if p.estado != 'Anulado' %}
-  <a class="boton boton-whatsapp" target="_blank" rel="noopener"
+  <a class="boton boton-whatsapp" target="_blank" rel="noopener" {% if abrir_whatsapp %}data-abrir-solo{% endif %}
      href="https://wa.me/{{ wa }}?text={{ mensaje_wa|urlencode }}">{{ icono('whatsapp') }} Enviar por WhatsApp{{ '' if wa else ' (elegir contacto)' }}</a>
+  {% if p.tutor_correo %}
+  <form method="post" action="{{ url_for('caja.enviar_correo', id_pago=p.id_pago) }}" class="en-linea">
+    {{ csrf() }}
+    <button class="boton boton-claro" {% if not correo_listo %}disabled title="Falta configurar el correo de la escuela"{% endif %}>Enviar por correo</button>
+  </form>
+  {% endif %}
   {% endif %}
   <button type="button" class="boton boton-claro" data-imprimir>Imprimir</button>
   <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a cobrar</a>
 </div>
+{% if p.estado != 'Anulado' and p.tutor_correo and not correo_listo %}
+<p class="ayuda no-imprimir">El envío por correo (a {{ p.tutor_correo }}) se activa cuando se configure el correo de la escuela.</p>
+{% endif %}
 
 {# Mismo formato que una factura, pero es un RECIBO: la escuela no tiene NIT y no puede emitir facturas #}
 <article class="recibo{{ ' recibo-anulado' if p.estado == 'Anulado' }}" aria-label="Recibo {{ p.numero_recibo }}">

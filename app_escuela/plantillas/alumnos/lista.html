@@ -24,6 +24,7 @@
       <option value="">Todos</option>
       <option value="ACTIVO" {% if estado == 'ACTIVO' %}selected{% endif %}>Activos</option>
       <option value="INACTIVO" {% if estado == 'INACTIVO' %}selected{% endif %}>Desactivados</option>
+      <option value="BECADO" {% if estado == 'BECADO' %}selected{% endif %}>Becados</option>
     </select>
   </div>
   <div class="botones">
@@ -39,7 +40,7 @@
   {% for a in mostrar %}
   <li>
     <a class="fila-principal" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong>
-      <small>{{ a.grupos or 'Sin grupo' }}{{ ' · ' ~ a.edad ~ ' años' if a.edad is not none }} · {{ a.codigo }}{{ ' · tutor ' ~ a.tutor if a.tutor }}</small></a>
+      <small>{{ a.grupos or 'Sin grupo' }}{{ ' · ' ~ a.edad ~ ' años' if a.edad is not none }} · {{ a.codigo }}{{ ' · tutor ' ~ a.tutor if a.tutor }}{{ ' · beca ' ~ a.porcentaje_beca|int ~ ' %' if a.porcentaje_beca }}</small></a>
     {% if a.estado != 'ACTIVO' %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span></div>{% endif %}
   </li>
   {% endfor %}

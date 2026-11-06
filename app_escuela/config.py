@@ -31,6 +31,13 @@ EN_LA_NUBE = bool(BD_SERVIDOR) or EN_VERCEL
 VARIABLES_NUBE = ["BD_SERVIDOR", "BD_NOMBRE", "BD_USUARIO", "BD_CLAVE", "CLAVE_SECRETA"]
 FALTAN = [v for v in VARIABLES_NUBE if not os.environ.get(v)] if EN_LA_NUBE else []
 
+# ---- Correo para mandar el recibo al tutor. Mientras falten estas variables, la opción aparece desactivada.
+# Con Gmail: CORREO_USUARIO = la cuenta de la escuela y CORREO_CLAVE = una "contraseña de aplicación" de Google.
+CORREO_USUARIO = os.environ.get("CORREO_USUARIO", "")
+CORREO_CLAVE = os.environ.get("CORREO_CLAVE", "")
+CORREO_SERVIDOR = os.environ.get("CORREO_SERVIDOR", "smtp.gmail.com")
+CORREO_PUERTO = int(os.environ.get("CORREO_PUERTO", "587"))
+
 # ---- Base local (autenticación de Windows)
 CADENA_CONEXION = (
     "DRIVER={ODBC Driver 17 for SQL Server};"

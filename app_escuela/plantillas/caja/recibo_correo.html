@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><body style="margin:0;padding:24px 12px;background:#f2f2f2;font-family:Arial,Helvetica,sans-serif;color:#111">
+<table role="presentation" width="100%" style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;border-top:6px solid #F28C28" cellpadding="0" cellspacing="0">
+  <tr><td style="padding:20px 22px 8px">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+      <td><img src="cid:escudo" width="64" height="64" alt="Escudo"></td>
+      <td style="padding-left:12px"><strong style="font-size:18px">{{ escuela.nombre }}</strong><br>
+        <span style="color:#555;font-size:13px">{{ escuela.direccion }} · Tel. {{ escuela.telefono }}<br>{{ escuela.ciudad }}</span></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="padding:8px 22px">
+    <h1 style="font-size:20px;margin:12px 0 2px">Recibo de pago {{ p.numero_recibo }}</h1>
+    <p style="margin:0;color:#555;font-size:13px">(Sin derecho a crédito fiscal) · {{ p.fecha_pago|fecha }}</p>
+  </td></tr>
+  <tr><td style="padding:8px 22px">
+    <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:15px;border-collapse:collapse">
+      <tr><td style="color:#555">Alumno</td><td align="right"><strong>{{ p.nombres }} {{ p.apellidos or '' }}</strong></td></tr>
+      <tr><td style="color:#555">Grupo</td><td align="right">{{ p.grupo }}</td></tr>
+      <tr><td style="color:#555">Mensualidad</td><td align="right">{{ p.periodo }}</td></tr>
+      <tr><td style="color:#555">Método</td><td align="right">{{ p.metodo }}</td></tr>
+      <tr style="border-top:1px solid #ddd"><td><strong>Pagó</strong></td><td align="right"><strong style="font-size:20px">{{ p.monto|bs }}</strong></td></tr>
+      <tr><td colspan="2" style="color:#555;font-size:13px">Son: {{ p.monto|letras }}</td></tr>
+      <tr><td colspan="2" style="font-size:14px">{% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: <strong>{{ p.saldo_mensualidad|bs }}</strong>{% else %}✅ Mensualidad pagada completa{% endif %}</td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 22px 20px;color:#555;font-size:12px">Recibo interno de la escuela: no es una factura. ¡Gracias!</td></tr>
+</table>
+</body></html>
