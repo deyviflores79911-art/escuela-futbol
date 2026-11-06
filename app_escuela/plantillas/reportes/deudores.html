@@ -12,7 +12,9 @@
     generadas: se muestra {{ periodo }}. Puedes generarlas en <a href="{{ url_for('caja.mensualidades') }}">Caja → Mensualidades</a>.</span></p>
 {% endif %}
 
-<form class="tarjeta filtros" method="get">
+<details class="tarjeta plegable" {% if categoria or request.args.get('periodo') %}open{% endif %}>
+<summary>Filtrar · {{ periodo or 'todas las deudas' }} · {{ categoria or 'todas las categorías' }}</summary>
+<form class="filtros" method="get">
   <div class="campo">
     <label for="periodo">Periodo</label>
     <select id="periodo" name="periodo">
@@ -29,39 +31,31 @@
   </div>
   <div class="botones"><button class="boton">Ver</button></div>
 </form>
+</details>
 
 <div data-vivo="{{ refresco }}">
   {% include '_actualizado.html' %}
-  <div class="indicadores">
-    <div class="tarjeta indicador"><span class="valor">{{ deudores|length }}</span><span>mensualidad{{ 'es' if deudores|length != 1 }} con saldo{{ ' en ' ~ categoria if categoria }}</span></div>
-    <div class="tarjeta indicador"><span class="valor">{{ total|bs }}</span><span>por cobrar</span></div>
-    {% set vencidas = deudores|selectattr('vencida')|list %}
-    <div class="tarjeta indicador"><span class="valor">{{ vencidas|length }}</span><span>ya vencida{{ 's' if vencidas|length != 1 }}</span></div>
-  </div>
+  {% set vencidas = deudores|selectattr('vencida')|list %}
+  <p class="resumen-linea"><strong>{{ total|bs }}</strong> por cobrar · {{ deudores|length }} mensualidad{{ 'es' if deudores|length != 1 }} con saldo{{ ' en ' ~ categoria if categoria }} · {{ vencidas|length }} vencida{{ 's' if vencidas|length != 1 }}</p>
 
   {% if deudores %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Alumno</th><th>Tutor y teléfono</th><th>Categoría</th><th>Periodo</th><th>Adeudado</th><th>Atraso</th><th></th></tr></thead>
-    <tbody>
+  <ul class="lista-filas">
     {% for d in deudores %}
-      <tr>
-        <td><strong>{{ d.nombres }} {{ d.apellidos or '' }}</strong><br><span class="ayuda">{{ d.codigo }} · {{ d.grupo }}{{ ' · baja' if d.estado_inscripcion != 'ACTIVA' }}</span></td>
-        <td>{{ d.tutor or '—' }}<br>
-          {% if d.contacto %}<span class="ayuda">{{ d.contacto }}</span>
-            {% if d.wa %}<a class="boton boton-claro boton-chico" target="_blank" rel="noopener"
-               href="https://wa.me/{{ d.wa }}?text={{ ('Hola, le escribimos de la Escuela de Fútbol Fortaleza: la mensualidad ' ~ d.periodo ~ ' de ' ~ d.nombres ~ ' tiene un saldo pendiente.')|urlencode }}">WhatsApp</a>{% endif %}
-          {% else %}<span class="ayuda">Sin teléfono</span>{% endif %}
-        </td>
-        <td>{{ d.categoria }}</td>
-        <td>{{ d.periodo }}<br><span class="ayuda">vence {{ d.fecha_vencimiento|fecha }}</span></td>
-        <td><strong>{{ d.adeudado|bs }}</strong>{% if d.pagado > 0 %}<br><span class="ayuda">pagó {{ d.pagado|bs }} de {{ d.monto|bs }}</span>{% endif %}</td>
-        <td>{% if d.vencida %}<span class="estado estado-mal">{{ icono('alerta') }} {{ d.dias_atraso }} día{{ 's' if d.dias_atraso != 1 }}</span>
-            {% else %}<span class="estado estado-medio">{{ icono('info') }} Aún no vence</span>{% endif %}</td>
-        <td><a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=d.id_mensualidad) }}">Cobrar</a></td>
-      </tr>
+    <li class="fila-deudor" data-categoria="{{ d.categoria }}">
+      <div class="fila-principal">
+        <strong>{{ d.nombres }} {{ d.apellidos or '' }} · {{ d.adeudado|bs }}</strong>
+        <small>{{ d.grupo }} · mes {{ d.periodo }} ·
+          {% if d.vencida %}<span class="texto-mal">{{ d.dias_atraso }} día{{ 's' if d.dias_atraso != 1 }} de atraso</span>{% else %}aún no vence{% endif %}{{ ' · baja' if d.estado_inscripcion != 'ACTIVA' }}</small>
+        <small>{{ d.tutor or 'Sin tutor' }}{{ ' · ' ~ d.contacto if d.contacto }}</small>
+      </div>
+      <div class="fila-acciones">
+        {% if d.wa %}<a class="boton boton-claro boton-icono" target="_blank" rel="noopener" aria-label="WhatsApp a {{ d.tutor }}"
+           href="https://wa.me/{{ d.wa }}?text={{ ('Hola, le escribimos de la Escuela de Fútbol Fortaleza: la mensualidad ' ~ d.periodo ~ ' de ' ~ d.nombres ~ ' tiene un saldo pendiente de ' ~ d.adeudado|bs ~ '.')|urlencode }}">{{ icono('whatsapp') }}</a>{% endif %}
+        <a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=d.id_mensualidad) }}">Cobrar</a>
+      </div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
+  </ul>
   {% else %}
   <div class="tarjeta vacio">
     <p>{{ icono('check') }} Nadie debe {{ ('en ' ~ categoria ~ ' ') if categoria }}{{ ('en ' ~ periodo) if periodo else 'nada' }}. ¡Todo cobrado!</p>

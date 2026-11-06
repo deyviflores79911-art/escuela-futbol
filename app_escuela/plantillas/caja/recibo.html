@@ -4,9 +4,22 @@
 {% block titulo %}Recibo {{ p.numero_recibo }}{% endblock %}
 {% block contenido %}
 <p class="miga no-imprimir"><a href="{{ url_for('caja.cuenta', id_alumno=p.id_alumno) }}">← Cuenta de {{ p.nombres }}</a></p>
+{# En la cancha no hay impresora: el recibo se manda por WhatsApp al tutor (resumen en texto) #}
+{% set mensaje_wa -%}
+{{ escuela.nombre }}
+RECIBO {{ p.numero_recibo }} · {{ p.fecha_pago|fecha }}
+Alumno: {{ p.nombres }} {{ p.apellidos or '' }} ({{ p.grupo }})
+Mensualidad {{ p.periodo }}: pagó {{ p.monto|bs }} ({{ p.metodo }})
+{% if p.saldo_mensualidad > 0 %}Saldo pendiente de ese mes: {{ p.saldo_mensualidad|bs }}{% else %}Mensualidad pagada completa ✅{% endif %}
+¡Gracias!
+{%- endset %}
 <div class="botones no-imprimir">
-  <button type="button" class="boton" data-imprimir>Imprimir recibo</button>
-  <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a caja</a>
+  {% if p.estado != 'Anulado' %}
+  <a class="boton boton-whatsapp" target="_blank" rel="noopener"
+     href="https://wa.me/{{ wa }}?text={{ mensaje_wa|urlencode }}">{{ icono('whatsapp') }} Enviar por WhatsApp{{ '' if wa else ' (elegir contacto)' }}</a>
+  {% endif %}
+  <button type="button" class="boton boton-claro" data-imprimir>Imprimir</button>
+  <a class="boton boton-claro" href="{{ url_for('caja.caja') }}">Volver a cobrar</a>
 </div>
 
 {# Mismo formato que una factura, pero es un RECIBO: la escuela no tiene NIT y no puede emitir facturas #}

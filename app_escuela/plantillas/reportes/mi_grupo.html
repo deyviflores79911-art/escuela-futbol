@@ -19,6 +19,21 @@
         <span class="estado estado-mal">{{ icono('alerta') }} {{ g.deben }} debe{{ 'n' if g.deben != 1 }}</span>
       </div>
     </div>
+    {% if g.alumnos %}
+    <ul class="lista-filas">
+      {% for a in g.alumnos|sort(attribute='alumno')|sort(attribute='debe', reverse=true) %}
+      <li>
+        <div class="fila-principal"><strong>{{ a.alumno }}</strong>
+          <small>{{ a.edad ~ ' años' if a.edad is not none else 'Sin fecha de nacimiento' }} · {{ a.codigo }}</small>
+          {% if a.fuera_de_edad %}<small class="texto-mal">{{ icono('alerta') }} Fuera de su categoría</small>{% endif %}</div>
+        <div class="fila-acciones">{% if a.debe %}<span class="estado estado-mal">{{ icono('alerta') }} Debe</span>
+          {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <details class="plegable plegable-simple">
+    <summary>Horarios ({{ g.horarios|length }}) y cupo ({{ g.inscritos }} de {{ g.cupo_maximo }})</summary>
     <div class="rejilla-ficha">
       <div>
         <h3 class="subtitulo-chico">Horarios</h3>
@@ -33,20 +48,8 @@
         <div class="cupo" role="img" aria-label="{{ g.inscritos }} de {{ g.cupo_maximo }} cupos ocupados"><span style="width: {{ [porcentaje, 100]|min }}%"></span></div>
       </div>
     </div>
+    </details>
     {% if g.alumnos %}
-    <div class="tabla-envoltura"><table class="tabla tabla-compacta">
-      <thead><tr><th>Alumno</th><th>Edad</th><th>Pagos</th></tr></thead>
-      <tbody>
-      {% for a in g.alumnos %}
-        <tr>
-          <td><strong>{{ a.alumno }}</strong><br><span class="ayuda">{{ a.codigo }}</span></td>
-          <td>{{ a.edad if a.edad is not none else '—' }}{% if a.fuera_de_edad %}<br><span class="estado estado-mal">{{ icono('alerta') }} Fuera de su categoría</span>{% endif %}</td>
-          <td>{% if a.debe %}<span class="estado estado-mal">{{ icono('alerta') }} Debe</span>
-              {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table></div>
     {% set fuera = g.alumnos|selectattr('fuera_de_edad')|list|length %}
     {% if fuera %}<p class="ayuda">{{ icono('alerta') }} {{ fuera }} alumno{{ 's' if fuera != 1 }} con edad fuera de {{ g.categoria }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años). Avisa al dueño para cambiarlo{{ 's' if fuera != 1 }} de grupo.</p>{% endif %}
     <p class="ayuda">"Debe" = tiene saldo en alguna mensualidad ya vencida. Recuérdaselo al tutor; los cobros los registra el dueño.</p>

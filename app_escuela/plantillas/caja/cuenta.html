@@ -2,76 +2,70 @@
 {% from "_iconos.html" import icono %}
 {% block titulo %}Cuenta de {{ a.nombres }}{% endblock %}
 {% block contenido %}
-<p class="miga"><a href="{{ url_for('caja.caja') }}">← Caja</a></p>
-<div class="barra-titulo">
-  <div>
-    <h1>{{ a.nombres }} {{ a.apellidos or '' }}</h1>
-    <p class="subtitulo">{{ a.codigo }} · {{ a.grupos or 'Sin grupo activo' }} · Tutor: {{ a.tutor or '—' }}
-      {% if a.tutor_whatsapp or a.tutor_telefono %}({{ a.tutor_whatsapp or a.tutor_telefono }}){% endif %}</p>
-  </div>
-  <a class="boton boton-claro" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">Ver ficha</a>
+<p class="miga"><a href="{{ url_for('caja.caja') }}">← Cobrar</a></p>
+<h1>{{ a.nombres }} {{ a.apellidos or '' }}</h1>
+<p class="subtitulo">{{ a.codigo }} · {{ a.grupos or 'Sin grupo activo' }} · Tutor: {{ a.tutor or '—' }}
+  {% if a.tutor_whatsapp or a.tutor_telefono %}({{ a.tutor_whatsapp or a.tutor_telefono }}){% endif %}</p>
+
+{# Lo primero que se ve: cuánto debe y el botón para cobrar la mensualidad más atrasada #}
+{% if deudas %}
+  {% set primera = deudas[0] %}
+  <section class="tarjeta cobro-principal">
+    <p class="ayuda">{{ icono('alerta') }} Debe en total · {{ deudas|length }} mensualidad{{ 'es' if deudas|length != 1 }}</p>
+    <p class="monto-grande">{{ saldo_total|bs }}</p>
+    <a class="boton boton-cobrar ancho" href="{{ url_for('caja.cobrar', id_mensualidad=primera.id_mensualidad) }}">
+      Cobrar {{ primera.saldo|bs }}<small>mes {{ primera.periodo }}{{ ' · vencida hace ' ~ primera.dias_atraso ~ ' días' if primera.estado == 'Vencida' }}</small></a>
+    {% if deudas|length > 1 %}
+    <ul class="lista-filas">
+      {% for m in deudas[1:] %}
+      <li>
+        <div class="fila-principal"><strong>{{ m.periodo }} · {{ m.saldo|bs }}</strong>
+          <small>{{ m.grupo }} · vence {{ m.fecha_vencimiento|fecha }}{{ ' · ' ~ m.dias_atraso ~ ' días de atraso' if m.estado == 'Vencida' }}</small></div>
+        <div class="fila-acciones"><a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=m.id_mensualidad) }}">Cobrar</a></div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+{% else %}
+  <section class="tarjeta cobro-principal al-dia">
+    <p class="monto-grande">{{ icono('check') }} Al día</p>
+    <p class="ayuda">{{ 'No debe ninguna mensualidad.' if pagadas else 'Todavía no tiene mensualidades.' }}
+      {% if not pagadas %}Genéralas en <a href="{{ url_for('caja.mensualidades') }}">Mensualidades</a>.{% endif %}</p>
+  </section>
+{% endif %}
+
+<div class="botones separado">
+  <a class="boton boton-claro" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">Ver ficha del alumno</a>
 </div>
 
-<div class="indicadores">
-  <div class="tarjeta indicador">
-    <span class="valor">{{ saldo_total|bs }}</span>
-    <span>{% if saldo_total > 0 %}{{ icono('alerta') }} Debe en total{% else %}{{ icono('check') }} Al día{% endif %}</span>
-  </div>
-  {% set con_saldo = mensualidades|selectattr('saldo', 'gt', 0)|list %}
-  <div class="tarjeta indicador"><span class="valor">{{ con_saldo|length }}</span><span>mensualidad{{ 'es' if con_saldo|length != 1 }} con saldo</span></div>
-  <div class="tarjeta indicador"><span class="valor">{{ pagos_alumno|length }}</span><span>pagos registrados</span></div>
-</div>
-
-<section class="tarjeta">
-  <h2>Mensualidades</h2>
-  {% if mensualidades %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Periodo</th><th>Grupo</th><th>Vence</th><th>Monto</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
-    <tbody>
-    {% for m in mensualidades %}
-      <tr>
-        <td><strong>{{ m.periodo }}</strong></td>
-        <td>{{ m.grupo }}</td>
-        <td>{{ m.fecha_vencimiento|fecha }}</td>
-        <td>{{ m.monto|bs }}</td>
-        <td>{{ m.pagado|bs }}</td>
-        <td><strong>{{ m.saldo|bs if m.saldo > 0 else '—' }}</strong></td>
-        <td>
-          {% if m.estado == 'Pagada' %}<span class="estado estado-ok">{{ icono('check') }} Pagada</span>
-          {% elif m.estado == 'Vencida' %}<span class="estado estado-mal">{{ icono('alerta') }} Vencida ({{ m.dias_atraso }} días)</span>
-          {% elif m.estado == 'Parcial' %}<span class="estado estado-medio">{{ icono('info') }} Parcial</span>
-          {% else %}<span class="estado estado-medio">{{ icono('info') }} Pendiente</span>{% endif %}
-        </td>
-        <td>{% if m.saldo > 0 %}<a class="boton boton-chico" href="{{ url_for('caja.cobrar', id_mensualidad=m.id_mensualidad) }}">Cobrar</a>{% endif %}</td>
-      </tr>
+{# El historial queda plegado: se abre solo si hace falta #}
+{% if pagadas %}
+<details class="tarjeta plegable">
+  <summary>Mensualidades pagadas ({{ pagadas|length }})</summary>
+  <ul class="lista-filas">
+    {% for m in pagadas %}
+    <li>
+      <div class="fila-principal"><strong>{{ m.periodo }}</strong><small>{{ m.grupo }} · {{ m.monto|bs }}</small></div>
+      <div class="fila-acciones"><span class="estado estado-ok">{{ icono('check') }} Pagada</span></div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
-  {% else %}
-    <p class="vacio">Este alumno todavía no tiene mensualidades. Genéralas en <a href="{{ url_for('caja.mensualidades') }}">Mensualidades</a>.</p>
-  {% endif %}
-</section>
+  </ul>
+</details>
+{% endif %}
 
-<section class="tarjeta">
-  <h2>Pagos</h2>
-  {% if pagos_alumno %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Recibo</th><th>Fecha</th><th>Periodo</th><th>Método</th><th>Monto</th><th>Estado</th></tr></thead>
-    <tbody>
+{% if pagos_alumno %}
+<details class="tarjeta plegable">
+  <summary>Pagos y recibos ({{ pagos_alumno|length }})</summary>
+  <ul class="lista-filas">
     {% for p in pagos_alumno %}
-      <tr>
-        <td><a href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }}</strong></a></td>
-        <td>{{ p.fecha_pago|fecha }}</td>
-        <td>{{ p.periodo }}</td>
-        <td>{{ p.metodo }}</td>
-        <td>{{ p.monto|bs }}</td>
-        <td>{% include '_estado_pago.html' %}</td>
-      </tr>
+    <li>
+      <a class="fila-principal" href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }} · {{ p.monto|bs }}</strong>
+        <small>{{ p.fecha_pago|fecha }} · mes {{ p.periodo }} · {{ p.metodo }}</small></a>
+      <div class="fila-acciones">{% include '_estado_pago.html' %}</div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
-  {% else %}
-    <p class="vacio">Todavía no hay pagos de este alumno.</p>
-  {% endif %}
-</section>
+  </ul>
+</details>
+{% endif %}
 {% endblock %}

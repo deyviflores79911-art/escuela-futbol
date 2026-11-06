@@ -8,28 +8,26 @@
 <form class="tarjeta form-buscar" method="get" role="search">
   <label for="q" class="solo-lector">Buscar alumno</label>
   <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" {% if not q %}autofocus{% endif %} enterkeyhint="search"
-         placeholder="¿A quién le cobras? Nombre, código o tutor">
+         placeholder="Nombre o código del alumno">
   <button class="boton">Buscar</button>
 </form>
 
 {% if q %}
   {% if encontrados %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Alumno</th><th>Grupo</th><th>Tutor</th><th>Debe</th><th></th></tr></thead>
-    <tbody>
-    {% for a in encontrados %}
-      <tr>
-        <td><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong><br><span class="ayuda">{{ a.codigo }}</span></td>
-        <td>{{ a.grupos or 'Sin grupo' }}</td>
-        <td>{{ a.tutor or '—' }}</td>
-        <td>{% if a.saldo > 0 %}<span class="estado estado-mal">{{ icono('alerta') }} Debe {{ a.saldo|bs }}</span>
-            {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}</td>
-        <td>{% if a.cobrar %}<a class="boton boton-cobrar" href="{{ url_for('caja.cobrar', id_mensualidad=a.cobrar.id_mensualidad) }}">Cobrar {{ a.cobrar.saldo|bs }}<small>mes {{ a.cobrar.periodo }}</small></a>{% endif %}
-            <a class="boton boton-claro" href="{{ url_for('caja.cuenta', id_alumno=a.id_alumno) }}">Ver cuenta</a></td>
-      </tr>
+  {% set maximo = 20 %}
+  <ul class="lista-filas">
+    {% for a in encontrados[:maximo] %}
+    <li>
+      <a class="fila-principal" href="{{ url_for('caja.cuenta', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong>
+        <small>{{ a.codigo }} · {{ a.grupos or 'Sin grupo' }}{{ ' · debe ' ~ a.saldo|bs if a.saldo > 0 }}</small></a>
+      <div class="fila-acciones">
+        {% if a.cobrar %}<a class="boton boton-cobrar" href="{{ url_for('caja.cobrar', id_mensualidad=a.cobrar.id_mensualidad) }}">Cobrar {{ a.cobrar.saldo|bs }}<small>mes {{ a.cobrar.periodo }}</small></a>
+        {% else %}<span class="estado estado-ok">{{ icono('check') }} Al día</span>{% endif %}
+      </div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
+  </ul>
+  {% if encontrados|length > maximo %}<p class="ayuda">Hay {{ encontrados|length }} resultados: se muestran {{ maximo }}. Escribe más letras del nombre para encontrarlo.</p>{% endif %}
   {% else %}
     <div class="tarjeta vacio"><p>No se encontró ningún alumno con «{{ q }}».</p></div>
   {% endif %}
@@ -38,22 +36,15 @@
 <section class="tarjeta">
   <h2>Últimos pagos registrados en la app</h2>
   {% if ultimos %}
-  <div class="tabla-envoltura"><table class="tabla">
-    <thead><tr><th>Recibo</th><th>Fecha</th><th>Alumno</th><th>Periodo</th><th>Método</th><th>Monto</th><th>Estado</th></tr></thead>
-    <tbody>
+  <ul class="lista-filas">
     {% for p in ultimos %}
-      <tr>
-        <td><a href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.numero_recibo }}</strong></a></td>
-        <td>{{ p.fecha_pago|fecha }}</td>
-        <td>{{ p.nombres }} {{ p.apellidos or '' }}</td>
-        <td>{{ p.periodo }}</td>
-        <td>{{ p.metodo }}</td>
-        <td>{{ p.monto|bs }}</td>
-        <td>{% include '_estado_pago.html' %}</td>
-      </tr>
+    <li>
+      <a class="fila-principal" href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.nombres }} {{ p.apellidos or '' }} · {{ p.monto|bs }}</strong>
+        <small>{{ p.numero_recibo }} · {{ p.fecha_pago|fecha }} · mes {{ p.periodo }} · {{ p.metodo }}</small></a>
+      <div class="fila-acciones">{% include '_estado_pago.html' %}</div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table></div>
+  </ul>
   {% else %}
     <p class="vacio">Todavía no se registró ningún pago en la app. Busca un alumno para cobrar el primero.</p>
   {% endif %}

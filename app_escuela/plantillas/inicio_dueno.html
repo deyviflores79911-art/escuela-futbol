@@ -3,18 +3,20 @@
 {% block titulo %}Inicio{% endblock %}
 {% block contenido %}
 <h1 class="saludo">Hola, {{ usuario.nombres }}</h1>
+{% set faltan_mes = (mes_resumen.activas or 0) - (mes_resumen.ya_generadas or 0) %}
+{% if faltan_mes > 0 %}
+<a class="mensaje mensaje-aviso aviso-enlace" href="{{ url_for('caja.mensualidades', periodo=mes) }}">
+  {{ icono('billetera') }}<span><strong>{{ 'Falta generar' if mes_resumen.ya_generadas else 'Todavía no generaste' }} las mensualidades de {{ mes }}</strong>
+  ({{ faltan_mes }} alumno{{ 's' if faltan_mes != 1 }}). Sin eso, este mes nadie aparece en Deudores.</span>{{ icono('flecha') }}</a>
+{% endif %}
 {% if fuera_de_edad %}
-<section class="mensaje mensaje-error" role="alert">
-  <div>
-    <strong>{{ icono('alerta') }} {{ fuera_de_edad|length }} alumno{{ 's' if fuera_de_edad|length != 1 }} entrena{{ 'n' if fuera_de_edad|length != 1 }} en un grupo que no es de su edad.</strong>
-    Dalo de baja de ese grupo e inscríbelo en el que le corresponde.
-    <details><summary>Ver la lista</summary>
-      <ul class="lista-simple">{% for a in fuera_de_edad %}
-        <li><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">{{ a.alumno }}</a> ({{ a.codigo }}) · {{ a.edad }} años · está en {{ a.grupo }} ({{ a.rango }} años)</li>
-      {% endfor %}</ul>
-    </details>
-  </div>
-</section>
+<details class="mensaje mensaje-error aviso-plegable">
+  <summary>{{ icono('alerta') }} <strong>{{ fuera_de_edad|length }} alumno{{ 's' if fuera_de_edad|length != 1 }} en un grupo que no es de su edad</strong></summary>
+  <p>Dalo de baja de ese grupo e inscríbelo en el que le corresponde.</p>
+  <ul class="lista-simple">{% for a in fuera_de_edad %}
+    <li><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}">{{ a.alumno }}</a> ({{ a.codigo }}) · {{ a.edad }} años · está en {{ a.grupo }} ({{ a.rango }} años)</li>
+  {% endfor %}</ul>
+</details>
 {% endif %}
 
 {# Lo que más se hace, grande y al alcance del pulgar #}

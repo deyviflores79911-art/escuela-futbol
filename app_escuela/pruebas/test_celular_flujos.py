@@ -123,5 +123,56 @@ class PruebasAlumnoNuevoRapido(PruebaConBaseQueSeDeshace):
         self.assertIn("Ya tiene:", html)
 
 
+
+class PruebasPantallasCompactas(PruebaConBaseQueSeDeshace):
+    """Mejoras de uso en el celular: lo importante arriba y listas cortas."""
+
+    def test_cuenta_muestra_arriba_la_deuda_mas_vieja(self):
+        a = consultar_uno("""SELECT TOP 1 i.id_alumno FROM MENSUALIDAD m JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
+            WHERE m.monto > (SELECT ISNULL(SUM(p.monto), 0) FROM PAGO p WHERE p.id_mensualidad = m.id_mensualidad
+                             AND p.id_estado_pago <> 3)""")
+        html = self.dueno.get(f"/caja/alumnos/{a['id_alumno']}").get_data(as_text=True)
+        self.assertIn("Debe en total", html)
+        primero = html.index("boton-cobrar")
+        self.assertLess(primero, html.index("Ver ficha del alumno"), "el botón Cobrar va antes que todo lo demás")
+        if "Mensualidades pagadas" in html:
+            self.assertLess(primero, html.index("Mensualidades pagadas"))
+
+    def test_recibo_se_envia_por_whatsapp_al_tutor(self):
+        p = consultar_uno("""SELECT TOP 1 p.id_pago, ISNULL(t.whatsapp, t.telefono) AS cel, p.numero_recibo FROM PAGO p
+            JOIN ESTADO_PAGO e ON e.id_estado_pago = p.id_estado_pago JOIN MENSUALIDAD m ON m.id_mensualidad = p.id_mensualidad
+            JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion JOIN ALUMNO a ON a.id_alumno = i.id_alumno
+            JOIN TUTOR t ON t.id_tutor = a.id_tutor
+            WHERE e.nombre <> 'Anulado' AND LEN(ISNULL(t.whatsapp, t.telefono)) = 8""")
+        html = self.dueno.get(f"/pagos/{p['id_pago']}/recibo").get_data(as_text=True)
+        self.assertIn(f"https://wa.me/591{p['cel']}?text=", html)
+        self.assertIn(p["numero_recibo"], html.split("wa.me/")[1].split('"')[0])
+
+    def test_cobrar_con_metodo_en_botones(self):
+        m = consultar_uno("""SELECT TOP 1 m.id_mensualidad FROM MENSUALIDAD m
+            WHERE m.monto > (SELECT ISNULL(SUM(p.monto), 0) FROM PAGO p WHERE p.id_mensualidad = m.id_mensualidad
+                             AND p.id_estado_pago <> 3)""")
+        html = self.dueno.get(f"/caja/mensualidades/{m['id_mensualidad']}/cobrar").get_data(as_text=True)
+        self.assertEqual(html.count('type="radio" name="id_metodo_pago"'), self.contar("METODO_PAGO WHERE estado = 'ACTIVO'"))
+
+    def test_inicio_recuerda_generar_el_mes(self):
+        from datos import pagos
+        r = pagos.resumen_periodo(pagos.periodo_actual())
+        t = texto(self.dueno.get("/"))
+        if r["activas"] > r["ya_generadas"]:
+            self.assertIn(f"las mensualidades de {pagos.periodo_actual()}", t)
+        else:
+            self.assertNotIn("mensualidades de " + pagos.periodo_actual(), t)
+
+    def test_lista_de_alumnos_corta_con_ver_todos(self):
+        total = self.contar("ALUMNO")
+        html = self.dueno.get("/alumnos").get_data(as_text=True)
+        if total > 30:
+            self.assertEqual(html.count('class="fila-principal"'), 30)
+            self.assertIn(f"Ver los {total}", html)
+            todos = self.dueno.get("/alumnos?todos=1").get_data(as_text=True)
+            self.assertEqual(todos.count('class="fila-principal"'), min(total, 300))
+
+
 if __name__ == "__main__":
     unittest.main()

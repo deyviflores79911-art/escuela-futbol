@@ -50,7 +50,8 @@ def lista():
     q = (request.args.get("q") or "").strip()[:60]
     estado = request.args.get("estado") if request.args.get("estado") in ("ACTIVO", "INACTIVO") else None
     return render_template("alumnos/lista.html", alumnos=alumnos.buscar_alumnos(q, estado), q=q, estado=estado,
-                           total=alumnos.contar_alumnos(), maximo=alumnos.MAX_RESULTADOS)
+                           total=alumnos.contar_alumnos(), maximo=alumnos.MAX_RESULTADOS,
+                           por_pagina=30, todos=request.args.get("todos") == "1")
 
 
 @bp.route("/alumnos/<int:id_alumno>")

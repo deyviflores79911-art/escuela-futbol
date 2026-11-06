@@ -15,6 +15,18 @@
       {% if mapa(h.lugar) %}<a class="boton boton-claro" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">{{ icono('mapa') }} Cómo llegar</a>{% endif %}
     {% endfor %}{% else %}
       <strong>Hoy no hay entrenamiento</strong>
+      {# El próximo día de la semana con entrenamiento #}
+      {% set ns = namespace(proximo=none) %}
+      {% for i in range(1, 8) %}{% if not ns.proximo %}
+        {% set dia = dias[(hoy.weekday() + i) % 7] %}
+        {% set del_dia = g.horarios|selectattr('dia_semana', 'equalto', dia)|list %}
+        {% if del_dia %}{% set ns.proximo = (('Mañana' if i == 1 else del_dia[0].dia), del_dia[0]) %}{% endif %}
+      {% endif %}{% endfor %}
+      {% if ns.proximo %}
+        {% set h = ns.proximo[1] %}
+        <span>Próximo: <b>{{ ns.proximo[0] }} {{ h.hora_inicio.strftime('%H:%M') }}–{{ h.hora_fin.strftime('%H:%M') }}</b>{{ ' · ' ~ h.lugar if h.lugar }}</span>
+        {% if mapa(h.lugar) %}<a class="boton boton-claro" href="{{ mapa(h.lugar) }}" target="_blank" rel="noopener">{{ icono('mapa') }} Cómo llegar</a>{% endif %}
+      {% endif %}
     {% endif %}
   </section>
 {% endfor %}

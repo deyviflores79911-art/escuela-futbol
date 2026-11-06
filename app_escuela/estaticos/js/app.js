@@ -188,6 +188,38 @@ document.querySelectorAll(".form-horarios").forEach(function (f) {
   });
 })();
 
+// Aviso "Cargando…" al cambiar de pantalla o enviar un formulario. La base gratis de Azure se "duerme"
+// y la primera carga puede tardar: así no parece que la app se colgó.
+(function () {
+  var aviso = null, tiempos = [];
+  function mostrar(texto) {
+    if (!aviso) {
+      aviso = document.createElement("p");
+      aviso.className = "cargando";
+      aviso.setAttribute("role", "status");
+      document.body.appendChild(aviso);
+    }
+    aviso.textContent = texto;
+  }
+  function empezar() {
+    limpiar();
+    tiempos.push(setTimeout(function () { mostrar("Cargando…"); }, 900));
+    tiempos.push(setTimeout(function () { mostrar("Conectando con la base de datos… la primera vez del día puede tardar hasta un minuto."); }, 6000));
+  }
+  function limpiar() {
+    tiempos.forEach(clearTimeout); tiempos = [];
+    if (aviso) { aviso.remove(); aviso = null; }
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[href]");
+    if (!a || e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || a.target || a.hasAttribute("download")) return;
+    if (a.origin !== location.origin || a.getAttribute("href").charAt(0) === "#") return;
+    empezar();
+  });
+  document.addEventListener("submit", function (e) { if (!e.defaultPrevented) empezar(); });
+  window.addEventListener("pageshow", limpiar);   // al volver atrás, sin aviso colgado
+})();
+
 // <form data-un-solo-envio>: desactiva el botón al enviar para evitar un doble cobro por doble clic
 // (va al final: corre después de la confirmación, si el usuario cancela no se desactiva)
 document.addEventListener("submit", function (e) {

@@ -185,6 +185,7 @@ _SELECT_PAGO = """
            m.id_mensualidad, m.periodo, m.monto AS monto_mensualidad, m.fecha_vencimiento,
            a.id_alumno, a.codigo, a.nombres, a.apellidos,
            t.nombres + ' ' + ISNULL(t.apellidos, '') AS tutor, t.ci AS tutor_ci,
+           ISNULL(t.whatsapp, t.telefono) AS tutor_celular,
            g.nombre AS grupo, c.nombre AS categoria,
            u.nombres + ' ' + ISNULL(u.apellidos, '') AS registrado_por
     FROM PAGO p

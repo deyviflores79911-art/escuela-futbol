@@ -33,21 +33,20 @@
 </form>
 
 {% if alumnos %}
+{% set mostrar = alumnos if todos else alumnos[:por_pagina] %}
 <p class="ayuda">{{ alumnos|length }} resultado{{ 's' if alumnos|length != 1 }}{% if alumnos|length >= maximo %} (se muestran los primeros {{ maximo }}; afina la búsqueda){% endif %}.</p>
-<div class="tabla-envoltura"><table class="tabla">
-  <thead><tr><th>Alumno</th><th>Edad</th><th>Tutor</th><th>Grupo</th><th>Estado</th></tr></thead>
-  <tbody>
-  {% for a in alumnos %}
-    <tr>
-      <td><a href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong></a><br><span class="ayuda">{{ a.codigo }}</span></td>
-      <td>{{ a.edad if a.edad is not none else '—' }}</td>
-      <td>{{ a.tutor or '—' }}<br><span class="ayuda">{{ a.tutor_whatsapp or a.tutor_telefono or '' }}</span></td>
-      <td>{{ a.grupos or 'Sin grupo' }}</td>
-      <td>{% if a.estado == 'ACTIVO' %}<span class="estado estado-ok">{{ icono('check') }} Activo</span>{% else %}<span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span>{% endif %}</td>
-    </tr>
+<ul class="lista-filas">
+  {% for a in mostrar %}
+  <li>
+    <a class="fila-principal" href="{{ url_for('alumnos.ficha', id_alumno=a.id_alumno) }}"><strong>{{ a.nombres }} {{ a.apellidos or '' }}</strong>
+      <small>{{ a.grupos or 'Sin grupo' }}{{ ' · ' ~ a.edad ~ ' años' if a.edad is not none }} · {{ a.codigo }}{{ ' · tutor ' ~ a.tutor if a.tutor }}</small></a>
+    {% if a.estado != 'ACTIVO' %}<div class="fila-acciones"><span class="estado estado-mal">{{ icono('cruz') }} Desactivado</span></div>{% endif %}
+  </li>
   {% endfor %}
-  </tbody>
-</table></div>
+</ul>
+{% if mostrar|length < alumnos|length %}
+<p><a class="boton boton-claro ancho" href="{{ url_for('alumnos.lista', q=q or None, estado=estado or None, todos=1) }}">Ver los {{ alumnos|length }}</a></p>
+{% endif %}
 {% elif q or estado %}
 <div class="tarjeta vacio">
   <p>No se encontró ningún alumno con «{{ q }}».</p>

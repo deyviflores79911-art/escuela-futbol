@@ -23,20 +23,14 @@
 </form>
 {% if tutores %}
 <p class="ayuda">{{ tutores|length }} tutor{{ 'es' if tutores|length != 1 }}{% if tutores|length >= maximo %} (se muestran los primeros {{ maximo }}){% endif %}.</p>
-<div class="tabla-envoltura"><table class="tabla">
-  <thead><tr><th>Tutor</th><th>CI</th><th>Teléfono</th><th>WhatsApp</th><th>Alumnos</th></tr></thead>
-  <tbody>
+<ul class="lista-filas">
   {% for t in tutores %}
-    <tr>
-      <td><a href="{{ url_for('alumnos.tutor', id_tutor=t.id_tutor) }}"><strong>{{ t.nombres }} {{ t.apellidos or '' }}</strong></a></td>
-      <td>{{ t.ci or '—' }}</td>
-      <td>{{ t.telefono or '—' }}</td>
-      <td>{{ t.whatsapp or '—' }}</td>
-      <td>{{ t.alumnos }}</td>
-    </tr>
+  <li>
+    <a class="fila-principal" href="{{ url_for('alumnos.tutor', id_tutor=t.id_tutor) }}"><strong>{{ t.nombres }} {{ t.apellidos or '' }}</strong>
+      <small>{{ t.whatsapp or t.telefono or 'Sin celular' }}{{ ' · CI ' ~ t.ci if t.ci }} · {{ t.alumnos }} alumno{{ 's' if t.alumnos != 1 }}</small></a>
+  </li>
   {% endfor %}
-  </tbody>
-</table></div>
+</ul>
 {% else %}
 <div class="tarjeta vacio">
   <p>{{ 'No se encontró ningún tutor con «' ~ q ~ '».' if q else 'Todavía no hay tutores registrados.' }}</p>

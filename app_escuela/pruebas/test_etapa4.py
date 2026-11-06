@@ -57,7 +57,7 @@ class PruebasEtapa4(AyudaCaja, PruebaConBaseQueSeDeshace):
     def test_filtro_por_categoria_y_lista_vacia(self):
         cat = reportes.deudores("2026-09")[0]["categoria"]
         html = self.dueno.get(f"/reportes/deudores?periodo=2026-09&categoria={cat}").get_data(as_text=True)
-        categorias = set(re.findall(r"<td>(Sub-\d+)</td>", html))
+        categorias = set(re.findall(r'data-categoria="(Sub-\d+)"', html))
         self.assertEqual(categorias, {cat})
         self.assertIn("Nadie debe", texto(self.dueno.get("/reportes/deudores?periodo=2026-09&categoria=Ninguna")))
 

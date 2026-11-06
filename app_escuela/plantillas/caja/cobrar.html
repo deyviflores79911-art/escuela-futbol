@@ -1,29 +1,36 @@
 {% extends "base.html" %}
-{% from "_campos.html" import campo, csrf, seleccion %}
+{% from "_campos.html" import campo, csrf %}
 {% block titulo %}Cobrar {{ m.periodo }}{% endblock %}
 {% block contenido %}
 <p class="miga"><a href="{{ url_for('caja.cuenta', id_alumno=m.id_alumno) }}">← Cuenta de {{ m.nombres }}</a></p>
 <section class="tarjeta tarjeta-media">
-  <h1>Cobrar mensualidad</h1>
-  <dl class="datos">
-    <dt>Alumno</dt><dd>{{ m.nombres }} {{ m.apellidos or '' }} ({{ m.codigo }})</dd>
-    <dt>Grupo</dt><dd>{{ m.grupo }} · {{ m.categoria }}</dd>
-    <dt>Periodo</dt><dd>{{ m.periodo }} (vence el {{ m.fecha_vencimiento|fecha }})</dd>
-    <dt>Monto</dt><dd>{{ m.monto|bs }}</dd>
-    <dt>Ya pagado</dt><dd>{{ m.pagado|bs }}</dd>
-    <dt>Saldo</dt><dd><strong>{{ m.saldo|bs }}</strong></dd>
-  </dl>
+  <h1>Cobrar</h1>
+  {# Lo justo para saber qué se cobra, en pocas líneas: los campos quedan a la vista #}
+  <div class="resumen-cobro">
+    <strong>{{ m.nombres }} {{ m.apellidos or '' }}</strong>
+    <span>Mes {{ m.periodo }} · {{ m.grupo }} · vence {{ m.fecha_vencimiento|fecha }}</span>
+    <span>Saldo <strong>{{ m.saldo|bs }}</strong>{% if m.pagado > 0 %} (ya pagó {{ m.pagado|bs }} de {{ m.monto|bs }}){% endif %}</span>
+  </div>
 
   <form method="post" class="form-cobro" data-un-solo-envio>
     {{ csrf() }}
     <input type="hidden" name="clave_cobro" value="{{ clave_cobro }}">
-    {{ seleccion('id_metodo_pago', 'Método de pago', metodos_opciones, form.get('id_metodo_pago'), errores, requerido=true, vacio='Elige el método') }}
-    <div class="dos-columnas">
-      {{ campo('fecha_pago', 'Fecha de pago', form.get('fecha_pago'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy ~ '"') }}
-      {{ campo('monto', 'Monto (Bs)', form.get('monto'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"') }}
+    <div class="campo">
+      <span class="etiqueta" id="etiqueta-metodo">¿Cómo paga? <span class="obligatorio" aria-hidden="true">*</span></span>
+      <div class="opciones-metodo" role="radiogroup" aria-labelledby="etiqueta-metodo">
+        {% for v, nombre in metodos_opciones %}
+        <label class="opcion-chip opcion-grande"><input type="radio" name="id_metodo_pago" value="{{ v }}" required
+               {% if form.get('id_metodo_pago')|string == v|string %}checked{% endif %}> {{ nombre }}</label>
+        {% endfor %}
+      </div>
+      {% if errores.id_metodo_pago %}<p class="error-campo">{{ errores.id_metodo_pago }}</p>{% endif %}
     </div>
-    <p class="ayuda">Si pagas el saldo completo, el pago queda <strong>Confirmado</strong>; si pagas menos, queda
-      <strong>Parcial</strong> y el resto se puede cobrar después.</p>
+    <div class="dos-columnas">
+      {{ campo('monto', 'Monto (Bs)', form.get('monto'), tipo='number', errores=errores, requerido=true, extra='min="0.01" step="0.01"') }}
+      {{ campo('fecha_pago', 'Fecha de pago', form.get('fecha_pago'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy ~ '"') }}
+    </div>
+    <p class="ayuda">Si paga el saldo completo, el pago queda <strong>Confirmado</strong>; si paga menos, queda
+      <strong>Parcial</strong> y el resto se cobra después.</p>
     {% if pedir_confirmacion %}
       <label class="confirmacion">
         <input type="checkbox" name="confirmar_exceso" value="si" required>

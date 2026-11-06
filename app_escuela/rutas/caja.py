@@ -92,9 +92,12 @@ def caja():
 def cuenta(id_alumno):
     a = validar.existe_o_404(alumnos.obtener_alumno(id_alumno))
     mensualidades = pagos.mensualidades_de_alumno(id_alumno)
-    return render_template("caja/cuenta.html", a=a, mensualidades=mensualidades,
+    # Lo que se debe va arriba y de la más vieja a la más nueva: se cobra primero la más atrasada
+    deudas = sorted((m for m in mensualidades if m["saldo"] > 0), key=lambda m: (m["fecha_vencimiento"], m["periodo"]))
+    return render_template("caja/cuenta.html", a=a, deudas=deudas,
+                           pagadas=[m for m in mensualidades if m["saldo"] <= 0],
                            pagos_alumno=pagos.pagos_de_alumno(id_alumno),
-                           saldo_total=sum(m["saldo"] for m in mensualidades if m["saldo"] > 0))
+                           saldo_total=sum(m["saldo"] for m in deudas))
 
 
 # ---------------------------------------------------------------- Cobrar (RF-14, RF-15, RF-17, HU-08)
@@ -144,8 +147,9 @@ def cobrar(id_mensualidad):
 @bp.route("/pagos/<int:id_pago>/recibo")
 @solo_dueno
 def recibo(id_pago):
-    return render_template("caja/recibo.html", p=validar.existe_o_404(pagos.obtener_pago(id_pago)),
-                           escuela=config.ESCUELA)
+    p = validar.existe_o_404(pagos.obtener_pago(id_pago))
+    return render_template("caja/recibo.html", p=p, escuela=config.ESCUELA,
+                           wa=alumnos.numero_whatsapp(p["tutor_celular"]) or "")
 
 
 @bp.route("/pagos/<int:id_pago>/anular", methods=["POST"])
