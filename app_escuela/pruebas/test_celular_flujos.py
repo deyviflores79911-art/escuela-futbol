@@ -37,11 +37,35 @@ class PruebasFlujosCelular(PruebaConBaseQueSeDeshace):
         self.assertIn("tiene 14 años", texto(r))
         self.assertEqual(self.contar("ALUMNO WHERE codigo = 'P-NOCABE'"), 0, "todo o nada: el alumno tampoco se crea")
 
-    def test_alumno_nuevo_pide_grupo_o_despues(self):
+    def test_el_grupo_se_elige_solo_por_la_edad(self):
+        """Sin elegir grupo: el sistema calcula la categoría por la fecha y usa el grupo con más cupos."""
+        id_cat = self.crear_categoria("Prueba Sub-25", 24, 25)
+        chico = self.crear_grupo(cupo=2, id_categoria=id_cat, nombre="Prueba 25 chico")
+        grande = self.crear_grupo(cupo=9, id_categoria=id_cat, nombre="Prueba 25 grande")
+        nacimiento = date(date.today().year - 25, 1, 1).isoformat()   # 25 años: solo cabe en la categoría de prueba
         r = enviar(self.dueno, "/alumnos/nuevo", {
-            "codigo": "P-SINGRUPO", "nombres": "A", "apellidos": "B", "fecha_nacimiento": "2016-01-01",
-            "sexo": "F", "direccion": "", "id_tutor": 1})
-        self.assertIn("Elige el grupo donde entrenará", texto(r))
+            "codigo": "P-AUTO", "nombres": "Auto", "apellidos": "Grupo", "fecha_nacimiento": nacimiento,
+            "sexo": "F", "direccion": "", "id_tutor": 1})   # sin id_grupo: automático
+        self.assertEqual(r.status_code, 302, texto(r)[:300])
+        a = consultar_uno("SELECT id_alumno FROM ALUMNO WHERE codigo = 'P-AUTO'")
+        self.assertEqual(self.contar("INSCRIPCION WHERE id_alumno = ? AND id_grupo = ? AND estado = 'ACTIVA'",
+                                     (a["id_alumno"], grande)), 1, "va al grupo de su edad con más cupos")
+        self.assertEqual(self.contar("INSCRIPCION WHERE id_alumno = ? AND id_grupo = ?", (a["id_alumno"], chico)), 0)
+
+    def test_sin_grupo_de_su_edad_queda_registrado_y_avisa(self):
+        nacimiento = date(date.today().year - 45, 1, 1).isoformat()   # ninguna categoría es de 45 años
+        r = enviar(self.dueno, "/alumnos/nuevo", {
+            "codigo": "P-SINGRUPO", "nombres": "Sin", "apellidos": "Grupo", "fecha_nacimiento": nacimiento,
+            "sexo": "M", "direccion": "", "id_tutor": 1, "id_grupo": "auto"})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("quedó registrado sin grupo", texto(self.dueno.get(r.headers["Location"])))
+        a = consultar_uno("SELECT id_alumno FROM ALUMNO WHERE codigo = 'P-SINGRUPO'")
+        self.assertEqual(self.contar("INSCRIPCION WHERE id_alumno = ?", (a["id_alumno"],)), 0)
+
+    def test_ficha_dice_masculino_o_femenino(self):
+        a = consultar_uno("SELECT TOP 1 id_alumno, sexo FROM ALUMNO WHERE sexo IN ('M', 'F')")
+        t = texto(self.dueno.get(f"/alumnos/{a['id_alumno']}"))
+        self.assertIn({"M": "Masculino", "F": "Femenino"}[a["sexo"]], t)
 
     def test_cobrar_directo_desde_la_busqueda(self):
         deudor = consultar_uno("""SELECT TOP 1 a.codigo FROM ALUMNO a JOIN INSCRIPCION i ON i.id_alumno = a.id_alumno

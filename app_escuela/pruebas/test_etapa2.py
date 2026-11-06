@@ -134,7 +134,7 @@ class PruebasEtapa2(PruebaConBaseQueSeDeshace):
         t = texto(r)
         # El apellido ya no es obligatorio: si queda vacío se usa el del tutor
         for mensaje in ("El código es obligatorio", "El nombre es obligatorio",
-                        "no puede ser futura", "El sexo no es válido", "Busca y elige al tutor"):
+                        "no puede ser futura", "Elige el sexo: Masculino o Femenino", "Busca y elige al tutor"):
             self.assertIn(mensaje, t)
 
     def test_codigo_no_se_repite(self):

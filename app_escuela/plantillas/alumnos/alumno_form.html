@@ -63,10 +63,10 @@
         {{ campo('fecha_nacimiento', 'Fecha de nacimiento', form.get('fecha_nacimiento'), tipo='date', errores=errores, requerido=true, extra='max="' ~ hoy_iso ~ '"') }}
       </div>
       <div class="campo">
-        <span class="etiqueta" id="etiqueta-sexo">Es <span class="obligatorio" aria-hidden="true">*</span></span>
+        <span class="etiqueta" id="etiqueta-sexo">Sexo <span class="obligatorio" aria-hidden="true">*</span></span>
         <div class="opciones-chip" role="radiogroup" aria-labelledby="etiqueta-sexo">
-          <label class="opcion-chip opcion-grande"><input type="radio" name="sexo" value="M" required {% if form.get('sexo') == 'M' %}checked{% endif %}> Niño</label>
-          <label class="opcion-chip opcion-grande"><input type="radio" name="sexo" value="F" {% if form.get('sexo') == 'F' %}checked{% endif %}> Niña</label>
+          <label class="opcion-chip opcion-grande"><input type="radio" name="sexo" value="M" required {% if form.get('sexo') == 'M' %}checked{% endif %}> Masculino</label>
+          <label class="opcion-chip opcion-grande"><input type="radio" name="sexo" value="F" {% if form.get('sexo') == 'F' %}checked{% endif %}> Femenino</label>
         </div>
         {% if errores.sexo %}<p class="error-campo">{{ errores.sexo }}</p>{% endif %}
       </div>
@@ -81,25 +81,30 @@
     </fieldset>
 
     {% if not id_alumno %}
-    {# 3. GRUPO: solo los de su edad; si hay uno solo con cupo, queda elegido #}
+    {# 3. GRUPO: se elige solo con la fecha de nacimiento (categoría de su edad, el grupo con más cupos) #}
+    {% set elegido_a_mano = (form.get('id_grupo') or 'auto') != 'auto' %}
     <fieldset class="grupo-campos grupo-fijo" id="elegir-grupo">
       <legend>Grupo donde entrenará</legend>
-      <div class="campo">
-        <label for="id_grupo">Grupo <span class="obligatorio" aria-hidden="true">*</span></label>
-        <select id="id_grupo" name="id_grupo" required {% if errores.id_grupo %}aria-invalid="true"{% endif %}>
-          <option value="">Elige el grupo</option>
-          {% for g in grupos %}
-            <option value="{{ g.id_grupo }}" data-min="{{ g.edad_minima }}" data-max="{{ g.edad_maxima }}"
-                    data-nombre="{{ g.nombre }}" data-lleno="{{ 1 if g.lleno else 0 }}"
-                    {% if g.lleno %}disabled{% endif %} {% if form.get('id_grupo') == g.id_grupo|string %}selected{% endif %}>
-              {{ g.nombre }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años){{ ' — LLENO' if g.lleno else ' — ' ~ g.libres ~ ' libres' }}
-            </option>
-          {% endfor %}
-          <option value="despues" {% if form.get('id_grupo') == 'despues' %}selected{% endif %}>Inscribir después</option>
-        </select>
-        {% if errores.id_grupo %}<p class="error-campo">{{ errores.id_grupo }}</p>{% endif %}
-        <p class="ayuda" id="ayuda-grupo">Al poner la fecha de nacimiento solo quedan los grupos de su edad.</p>
-      </div>
+      <p class="grupo-auto" id="ayuda-grupo" aria-live="polite">Pon la fecha de nacimiento y el grupo se elige solo, según su edad.</p>
+      <details class="mas-datos" id="cambiar-grupo" {% if elegido_a_mano or errores.id_grupo %}open{% endif %}>
+        <summary>Elegir otro grupo</summary>
+        <div class="campo">
+          <label for="id_grupo">Grupo</label>
+          <select id="id_grupo" name="id_grupo" {% if errores.id_grupo %}aria-invalid="true"{% endif %}>
+            <option value="auto" {% if not elegido_a_mano %}selected{% endif %}>Automático, según su edad</option>
+            {% for g in grupos %}
+              <option value="{{ g.id_grupo }}" data-min="{{ g.edad_minima }}" data-max="{{ g.edad_maxima }}"
+                      data-nombre="{{ g.nombre }}" data-categoria="{{ g.categoria }}" data-libres="{{ g.libres }}"
+                      data-lleno="{{ 1 if g.lleno else 0 }}"
+                      {% if g.lleno %}disabled{% endif %} {% if form.get('id_grupo') == g.id_grupo|string %}selected{% endif %}>
+                {{ g.nombre }} ({{ g.edad_minima }}-{{ g.edad_maxima }} años){{ ' — LLENO' if g.lleno else ' — ' ~ g.libres ~ ' libres' }}
+              </option>
+            {% endfor %}
+            <option value="despues" {% if form.get('id_grupo') == 'despues' %}selected{% endif %}>Inscribir después</option>
+          </select>
+          {% if errores.id_grupo %}<p class="error-campo">{{ errores.id_grupo }}</p>{% endif %}
+        </div>
+      </details>
     </fieldset>
     {% endif %}
     <div class="botones accion-fija">

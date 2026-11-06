@@ -381,7 +381,7 @@ td a { color: var(--texto); }
 .opcion-chip input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--naranja); flex-shrink: 0; }
 .opcion-chip:has(input:checked) { border-color: var(--naranja); background: var(--debe-fondo); color: var(--debe-texto); }
 .opcion-todos { font-weight: 700; }
-/* Alumno nuevo: buscador de tutor y Niño / Niña */
+/* Alumno nuevo: buscador de tutor y sexo en botones */
 .etiqueta { font-weight: 500; }
 .opciones-chip { display: flex; gap: .5rem; }
 .opcion-grande { flex: 1 1 0; justify-content: center; min-height: 50px; font-size: 1.05rem; }
@@ -398,6 +398,10 @@ td a { color: var(--texto); }
 .tutor-elegido .ayuda { color: inherit; opacity: .85; margin: 0; }
 .boton.ancho { width: 100%; justify-content: center; }
 .mas-datos { margin: 0 0 1rem; }
+.grupo-auto { margin: 0 0 .75rem; padding: .75rem .9rem; border-radius: 12px; border: 1px dashed var(--borde); color: var(--texto-suave); }
+.grupo-auto.grupo-ok { border: 2px solid var(--naranja); background: var(--debe-fondo); color: var(--debe-texto); }
+.grupo-auto.grupo-mal { border: 2px solid var(--error); color: var(--texto); }
+.grupo-auto strong { font-weight: 700; }
 .mas-datos summary { padding: .5rem 0; color: var(--texto-suave); }
 .mas-datos[open] summary { margin-bottom: .5rem; }
 .lista-lugares { list-style: none; margin: 0 0 .5rem; padding: 0; }

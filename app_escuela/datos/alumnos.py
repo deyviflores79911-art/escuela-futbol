@@ -232,6 +232,25 @@ def cambiar_estado_alumno(id_alumno):
 
 # ---------------------------------------------------------------- Inscripciones
 
+def grupo_para_edad(fecha_nacimiento, hoy=None):
+    """
+    El grupo que le toca por su edad (regla de la escuela): uno de su categoría, el que tiene más cupos libres.
+    Devuelve (grupo, None) o (None, motivo) si no hay ninguno de su edad con cupo.
+    """
+    anios = edad(fecha_nacimiento, hoy)
+    if anios is None:
+        return None, "falta la fecha de nacimiento"
+    de_su_edad = [g for g in listar_grupos(solo_activos=True) if g["edad_minima"] <= anios <= g["edad_maxima"]]
+    con_cupo = [g for g in de_su_edad if not g["lleno"]]
+    if con_cupo:
+        return max(con_cupo, key=lambda g: (g["libres"], -g["id_grupo"])), None
+    if de_su_edad:
+        llenos = " y ".join(g["nombre"] for g in de_su_edad)
+        return None, f"tiene {anios} años y {llenos} {'están llenos' if len(de_su_edad) > 1 else 'está lleno'}"
+    return None, f"tiene {anios} años y no hay ningún grupo activo de su edad"
+
+
+
 def grupos_para_inscribir(id_alumno):
     """Grupos activos con sus cupos libres, marcando dónde ya está inscrito el alumno."""
     inscrito_en = {f["id_grupo"] for f in consultar(

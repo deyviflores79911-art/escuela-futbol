@@ -53,41 +53,72 @@ document.querySelectorAll(".form-horarios").forEach(function (f) {
   aplicar();
 });
 
-// Alumno nuevo: al poner la fecha de nacimiento, solo quedan los grupos de su edad (el servidor igual lo valida)
+// Alumno nuevo: al poner la fecha de nacimiento, el sistema calcula la categoría y elige el grupo
+// (el de su edad con más cupos libres). El servidor hace el mismo cálculo y valida la regla de edad.
 (function () {
   var fecha = document.getElementById("fecha_nacimiento");
   var grupo = document.querySelector("#elegir-grupo select");
   if (!fecha || !grupo) return;
-  var ayuda = document.getElementById("ayuda-grupo");
+  var aviso = document.getElementById("ayuda-grupo");
   function edad(valor) {
     var n = new Date(valor + "T00:00:00"), hoy = new Date();
-    if (isNaN(n)) return null;
+    if (!valor || isNaN(n)) return null;
     var e = hoy.getFullYear() - n.getFullYear();
     if (hoy.getMonth() < n.getMonth() || (hoy.getMonth() === n.getMonth() && hoy.getDate() < n.getDate())) e--;
     return e;
   }
-  function filtrar() {
+  function escribir(partes) {   // [texto, negrita, texto, ...] sin usar innerHTML
+    aviso.textContent = "";
+    partes.forEach(function (p, i) {
+      var nodo = i % 2 ? document.createElement("strong") : document.createTextNode(p);
+      if (i % 2) nodo.textContent = p;
+      aviso.appendChild(nodo);
+    });
+  }
+  function calcular() {
     var e = edad(fecha.value), validos = [], llenos = [];
     Array.prototype.forEach.call(grupo.options, function (o) {
       if (!o.dataset.min) return;
-      var cabe = e === null || (e >= +o.dataset.min && e <= +o.dataset.max);
+      var cabe = e !== null && e >= +o.dataset.min && e <= +o.dataset.max;
       var lleno = o.dataset.lleno === "1";
-      o.hidden = !cabe;
-      o.disabled = !cabe || lleno;
-      if (cabe && lleno) llenos.push(o.dataset.nombre);
+      o.hidden = e !== null && !cabe;
+      o.disabled = (e !== null && !cabe) || lleno;
+      if (cabe && lleno) llenos.push(o);
       if (cabe && !lleno) validos.push(o);
     });
-    if (grupo.selectedOptions[0] && grupo.selectedOptions[0].hidden) grupo.value = "";
-    if (validos.length === 1 && !grupo.value) grupo.value = validos[0].value;
-    if (e === null) return;
-    if (validos.length) ayuda.textContent = "Tiene " + e + " años: " + validos.length + " grupo(s) de su edad con cupo.";
-    else if (llenos.length) ayuda.textContent = "Tiene " + e + " años, pero " + llenos.join(" y ") +
-      " está lleno. Elige «Inscribir después» o sube el cupo del grupo.";
-    else ayuda.textContent = "Tiene " + e + " años y no hay ningún grupo activo de su edad.";
+    var actual = grupo.selectedOptions[0];
+    if (actual && actual.hidden) grupo.value = "auto";
+    aviso.classList.remove("grupo-ok", "grupo-mal");
+    if (e === null) {
+      escribir(["Pon la fecha de nacimiento y el grupo se elige solo, según su edad."]);
+      return;
+    }
+    if (e < 0 || e > 25) { aviso.classList.add("grupo-mal"); escribir(["Revisa la fecha de nacimiento: da " + e + " años."]); return; }
+    if (grupo.value === "despues") { escribir(["Tiene " + e + " años. Se guardará sin grupo."]); return; }
+    if (grupo.value !== "auto") {
+      var o = grupo.selectedOptions[0];
+      aviso.classList.add("grupo-ok");
+      escribir(["Tiene " + e + " años → ", o.dataset.categoria, " · entrenará en ", o.dataset.nombre, " (elegido a mano)"]);
+      return;
+    }
+    if (validos.length) {
+      var mejor = validos.reduce(function (a, b) { return +b.dataset.libres > +a.dataset.libres ? b : a; });
+      aviso.classList.add("grupo-ok");
+      escribir(["Tiene " + e + " años → ", mejor.dataset.categoria, " · entrenará en ", mejor.dataset.nombre,
+                " (" + mejor.dataset.libres + " cupo" + (+mejor.dataset.libres === 1 ? "" : "s") + " libre" + (+mejor.dataset.libres === 1 ? "" : "s") + ")"]);
+    } else if (llenos.length) {
+      aviso.classList.add("grupo-mal");
+      escribir(["Tiene " + e + " años, pero ", llenos.map(function (o) { return o.dataset.nombre; }).join(" y "),
+                " no tiene cupo. Se guardará sin grupo y lo inscribes cuando haya lugar (o sube el cupo del grupo)."]);
+    } else {
+      aviso.classList.add("grupo-mal");
+      escribir(["Tiene " + e + " años y no hay ningún grupo activo de su edad. Se guardará sin grupo."]);
+    }
   }
-  fecha.addEventListener("change", filtrar);
-  fecha.addEventListener("input", filtrar);
-  filtrar();
+  fecha.addEventListener("change", calcular);
+  fecha.addEventListener("input", calcular);
+  grupo.addEventListener("change", calcular);
+  calcular();
 })();
 
 // Alumno nuevo: el tutor se busca escribiendo (nombre, CI o celular) y se elige con un toque.

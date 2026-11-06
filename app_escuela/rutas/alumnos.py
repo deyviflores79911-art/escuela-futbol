@@ -92,18 +92,29 @@ def alumno_form(id_alumno):
             "direccion": validar.texto(form, "direccion", errores, "La dirección", obligatorio=False, maximo=200),
             "id_tutor": int(id_tutor) if id_tutor.isdigit() else None,
         }
-        inscribir_en = None
+        if "sexo" in errores:
+            errores["sexo"] = "Elige el sexo: Masculino o Femenino."
+        inscribir_en, sin_grupo = None, None
         if not id_alumno:
-            grupo = form.get("id_grupo") or ""
+            grupo = form.get("id_grupo") or "auto"
             if grupo.isdigit():
                 inscribir_en = (int(grupo), date.today())
+            elif grupo == "auto":   # lo normal: el sistema elige el grupo por la edad
+                if datos["fecha_nacimiento"]:
+                    elegido, sin_grupo = alumnos.grupo_para_edad(datos["fecha_nacimiento"])
+                    if elegido:
+                        inscribir_en = (elegido["id_grupo"], date.today())
             elif grupo != "despues":
                 errores["id_grupo"] = "Elige el grupo donde entrenará (o «Inscribir después»)."
         if not errores:
             try:
                 id_guardado = alumnos.guardar_alumno(id_alumno, datos, tutor_nuevo, inscribir_en)
                 inscrito = f" e inscrito en {catalogos.obtener_grupo(inscribir_en[0])['nombre']}" if inscribir_en else ""
-                flash(f"Alumno {datos['nombres']} {datos['apellidos']} guardado{inscrito}.", "ok")
+                nombre = f"{datos['nombres']} {datos['apellidos'] or ''}".strip()
+                if sin_grupo:
+                    flash(f"{nombre} quedó registrado sin grupo: {sin_grupo}. Inscríbelo desde su ficha cuando haya cupo.", "aviso")
+                else:
+                    flash(f"Alumno {nombre} guardado{inscrito}.", "ok")
                 return redirect(url_for("alumnos.ficha", id_alumno=id_guardado))
             except ErrorDatos as e:
                 flash(str(e), "error")
