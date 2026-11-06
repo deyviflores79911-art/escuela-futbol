@@ -62,7 +62,8 @@ def resumen_caja(desde, hasta):
            JOIN INSCRIPCION i ON i.id_inscripcion = m.id_inscripcion
            JOIN ALUMNO a ON a.id_alumno = i.id_alumno
            WHERE p.fecha_pago BETWEEN ? AND ?
-           ORDER BY p.fecha_pago DESC, p.id_pago DESC""", (desde, hasta))
+           ORDER BY p.fecha_pago DESC, p.id_pago DESC
+           OPTION (RECOMPILE)""", (desde, hasta))   # plan nuevo cada vez: con muchos pagos nuevos el plan guardado se volvía lento
     validos = [p for p in pagos if p["estado"] != "Anulado"]
     metodos = [m["nombre"] for m in consultar("SELECT nombre FROM METODO_PAGO ORDER BY id_metodo_pago")]
     por_metodo = []

@@ -240,7 +240,8 @@ def cambiar_beca(id_alumno, porcentaje, aplicar_desde=None):
 
 
 def cambiar_estado_alumno(id_alumno):
-    """ACTIVO <-> INACTIVO. No se desactiva si sigue inscrito en algún grupo. Devuelve el estado nuevo."""
+    """ACTIVO <-> INACTIVO. Dar de baja de la escuela también cierra sus inscripciones (quedan en BAJA:
+    el historial y los pagos se conservan). Devuelve el estado nuevo."""
     with transaccion() as cur:
         cur.execute("SELECT estado FROM ALUMNO WITH (UPDLOCK) WHERE id_alumno = ?", (id_alumno,))
         fila = cur.fetchone()
@@ -248,9 +249,7 @@ def cambiar_estado_alumno(id_alumno):
             raise ErrorDatos("Ese alumno no existe.")
         nuevo = "INACTIVO" if fila.estado == "ACTIVO" else "ACTIVO"
         if nuevo == "INACTIVO":
-            cur.execute("SELECT COUNT(*) FROM INSCRIPCION WHERE id_alumno = ? AND estado = 'ACTIVA'", (id_alumno,))
-            if cur.fetchone()[0]:
-                raise ErrorDatos("No se puede desactivar: sigue inscrito en un grupo. Dale de baja primero.")
+            cur.execute("UPDATE INSCRIPCION SET estado = 'BAJA' WHERE id_alumno = ? AND estado = 'ACTIVA'", (id_alumno,))
         cur.execute("UPDATE ALUMNO SET estado = ? WHERE id_alumno = ?", (nuevo, id_alumno))
         return nuevo
 

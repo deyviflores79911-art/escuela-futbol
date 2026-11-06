@@ -15,8 +15,8 @@
     <a class="boton boton-claro" href="{{ url_for('alumnos.alumno_form', id_alumno=a.id_alumno) }}">Editar</a>
     {% if a.id_tutor %}<a class="boton boton-claro" href="{{ url_for('alumnos.alumno_form', id_tutor=a.id_tutor) }}">{{ icono('mas') }} Registrar un hermano</a>{% endif %}
     <form method="post" action="{{ url_for('alumnos.alumno_estado', id_alumno=a.id_alumno) }}" class="en-linea"
-          data-confirmar="{{ '¿Desactivar a ' ~ a.nombres ~ '?' if a.estado == 'ACTIVO' else '¿Activar de nuevo a ' ~ a.nombres ~ '?' }}">
-      {{ csrf() }}<button class="boton {{ 'boton-peligro' if a.estado == 'ACTIVO' else 'boton-claro' }}">{{ 'Desactivar' if a.estado == 'ACTIVO' else 'Activar' }}</button>
+          data-confirmar="{{ '¿Dar de baja a ' ~ a.nombres ~ ' de la escuela? Deja sus grupos; el historial y los pagos se conservan.' if a.estado == 'ACTIVO' else '¿Activar de nuevo a ' ~ a.nombres ~ '?' }}">
+      {{ csrf() }}<button class="boton {{ 'boton-peligro' if a.estado == 'ACTIVO' else 'boton-claro' }}">{{ 'Dar de baja de la escuela' if a.estado == 'ACTIVO' else 'Activar' }}</button>
     </form>
   </div>
 </div>
@@ -85,7 +85,7 @@
           {% if i.estado == 'ACTIVA' %}
           <form method="post" action="{{ url_for('alumnos.baja', id_inscripcion=i.id_inscripcion, volver=request.path) }}" class="en-linea"
                 data-confirmar="¿Dar de baja a {{ a.nombres }} de {{ i.grupo }}? Su historial y sus pagos se conservan.">
-            {{ csrf() }}<button class="boton boton-peligro boton-chico">Dar de baja</button>
+            {{ csrf() }}<button class="boton boton-peligro boton-chico">Quitar del grupo</button>
           </form>
           {% endif %}
         </td>

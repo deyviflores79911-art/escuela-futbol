@@ -8,7 +8,7 @@
 <form class="tarjeta form-buscar" method="get" role="search" data-busqueda-vivo="#resultados">
   <label for="q" class="solo-lector">Buscar alumno</label>
   <input id="q" name="q" type="search" value="{{ q }}" maxlength="60" {% if not q %}autofocus{% endif %} enterkeyhint="search"
-         placeholder="Nombre o código del alumno">
+         placeholder="Nombre o código">
   <button class="boton">Buscar</button>
 </form>
 
@@ -35,20 +35,4 @@
 {% endif %}
 
 </div>
-<section class="tarjeta">
-  <h2>Últimos pagos registrados en la app</h2>
-  {% if ultimos %}
-  <ul class="lista-filas">
-    {% for p in ultimos %}
-    <li>
-      <a class="fila-principal" href="{{ url_for('caja.recibo', id_pago=p.id_pago) }}"><strong>{{ p.nombres }} {{ p.apellidos or '' }} · {{ p.monto|bs }}</strong>
-        <small>{{ p.numero_recibo }} · {{ p.fecha_pago|fecha }} · mes {{ p.periodo }} · {{ p.metodo }}</small></a>
-      <div class="fila-acciones">{% include '_estado_pago.html' %}</div>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-    <p class="vacio">Todavía no se registró ningún pago en la app. Busca un alumno para cobrar el primero.</p>
-  {% endif %}
-</section>
 {% endblock %}

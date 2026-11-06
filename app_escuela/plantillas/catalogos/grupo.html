@@ -28,7 +28,7 @@
 <section class="tarjeta">
   <div class="barra-titulo">
     <h2>Horarios</h2>
-    <a class="boton boton-chico" href="{{ url_for('catalogos.horario_form', id_grupo=g.id_grupo) }}">{{ icono('mas') }} Agregar horario</a>
+    <a class="boton boton-chico" href="{{ url_for('catalogos.horarios') }}">{{ icono('mas') }} Agregar horario</a>
   </div>
   {% if g.horarios %}
   <ul class="lista-filas">
@@ -82,7 +82,7 @@
             {% if i.estado == 'ACTIVA' %}
             <form method="post" action="{{ url_for('alumnos.baja', id_inscripcion=i.id_inscripcion, volver=request.path) }}" class="en-linea"
                   data-confirmar="¿Dar de baja a {{ i.nombres }} de {{ g.nombre }}? Su historial y sus pagos se conservan.">
-              {{ csrf() }}<button class="boton boton-peligro boton-chico">Dar de baja</button>
+              {{ csrf() }}<button class="boton boton-peligro boton-chico">Quitar del grupo</button>
             </form>
             {% endif %}
           </div>

@@ -1,6 +1,2 @@
-{# Hora de la última actualización de las pantallas en vivo (va dentro de la zona data-vivo) #}
-<div class="actualizado">
-  <span>Actualizado <strong data-hace>hace un momento</strong> · {{ ahora.strftime('%H:%M') }}</span>
-  <button type="button" class="boton boton-claro boton-chico" data-actualizar>Actualizar</button>
-  <span class="error-campo" data-sin-conexion hidden>Sin conexión. Recarga la página.</span>
-</div>
+{# Aviso si la actualización automática falla (va dentro de la zona data-vivo) #}
+<p class="error-campo" data-sin-conexion hidden>Sin conexión. Recarga la página.</p>

@@ -110,6 +110,17 @@ class PruebasEtapa2(PruebaConBaseQueSeDeshace):
         r = enviar(self.dueno, f"/grupos/{id_grupo}/estado", {}, desde=f"/grupos/{id_grupo}")
         self.assertIn("tiene 2 alumno(s) inscrito(s)", texto(self.dueno.get(r.headers["Location"])))
 
+    def test_dar_de_baja_de_la_escuela_cierra_sus_grupos(self):
+        """Un solo botón: deja sus grupos (BAJA) y queda desactivado; el historial se conserva."""
+        id_grupo = self.crear_grupo(cupo=3)
+        _, a = self.crear_alumno()
+        self.inscribir(a["id_alumno"], id_grupo)
+        r = enviar(self.dueno, f"/alumnos/{a['id_alumno']}/estado", {}, desde=f"/alumnos/{a['id_alumno']}")
+        self.assertIn("dado de baja de la escuela", texto(self.dueno.get(r.headers["Location"])))
+        self.assertEqual(consultar_uno("SELECT estado FROM ALUMNO WHERE id_alumno = ?", (a["id_alumno"],))["estado"], "INACTIVO")
+        self.assertEqual(self.contar("INSCRIPCION WHERE id_alumno = ? AND estado = 'ACTIVA'", (a["id_alumno"],)), 0)
+        self.assertEqual(self.contar("INSCRIPCION WHERE id_alumno = ? AND estado = 'BAJA'", (a["id_alumno"],)), 1)
+
     # --------------------------------------------------------------- horarios (RF-07)
 
     def test_horarios(self):
@@ -254,9 +265,6 @@ class PruebasEtapa2(PruebaConBaseQueSeDeshace):
         _, a = self.crear_alumno()
         self.inscribir(a["id_alumno"], id_grupo)
         insc = consultar_uno("SELECT id_inscripcion FROM INSCRIPCION WHERE id_alumno = ?", (a["id_alumno"],))
-        # No se puede desactivar al alumno mientras siga inscrito
-        r = enviar(self.dueno, f"/alumnos/{a['id_alumno']}/estado", {}, desde=f"/alumnos/{a['id_alumno']}")
-        self.assertIn("sigue inscrito", texto(self.dueno.get(r.headers["Location"])))
         r = enviar(self.dueno, f"/inscripciones/{insc['id_inscripcion']}/baja?volver=/grupos/{id_grupo}", {},
                    desde=f"/alumnos/{a['id_alumno']}")
         self.assertEqual(r.headers["Location"], f"/grupos/{id_grupo}")

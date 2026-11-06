@@ -8,7 +8,6 @@
   <div>
     <h1>Tutores</h1>
   </div>
-  <a class="boton" href="{{ url_for('alumnos.tutor_form') }}">{{ icono('mas') }} Nuevo tutor</a>
 </div>
 <form class="tarjeta filtros filtros-alumnos" method="get" role="search" data-busqueda-vivo="#resultados">
   <div class="campo">
@@ -34,7 +33,7 @@
 {% else %}
 <div class="tarjeta vacio">
   <p>{{ 'No se encontró ningún tutor con «' ~ q ~ '».' if q else 'Todavía no hay tutores registrados.' }}</p>
-  <a class="boton" href="{{ url_for('alumnos.tutor_form') }}">{{ icono('mas') }} Registrar un tutor</a>
+  <a class="boton" href="{{ url_for('alumnos.alumno_form') }}">{{ icono('mas') }} Inscribir un alumno</a>
 </div>
 {% endif %}
 </div>

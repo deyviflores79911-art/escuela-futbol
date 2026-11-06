@@ -84,7 +84,7 @@ def caja():
     for a in encontrados:
         a["saldo"] = saldos.get(a["id_alumno"], 0)
         a["cobrar"] = primeras.get(a["id_alumno"])  # botón "Cobrar" directo a la mensualidad más antigua
-    return render_template("caja/caja.html", q=q, encontrados=encontrados, ultimos=pagos.ultimos_pagos_app())
+    return render_template("caja/caja.html", q=q, encontrados=encontrados)
 
 
 @bp.route("/caja/alumnos/<int:id_alumno>")

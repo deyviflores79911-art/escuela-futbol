@@ -233,12 +233,6 @@ def pagos_de_alumno(id_alumno):
     return consultar(_SELECT_PAGO + " WHERE a.id_alumno = ? ORDER BY p.fecha_pago DESC, p.id_pago DESC", (id_alumno,))
 
 
-def ultimos_pagos_app(cantidad=15):
-    """Los últimos pagos registrados en esta app (recibos PAG-)."""
-    return consultar(f"SELECT TOP {int(cantidad)} * FROM ({_SELECT_PAGO} WHERE p.numero_recibo LIKE 'PAG-%') x "
-                     "ORDER BY id_pago DESC")
-
-
 def _siguiente_recibo(cur):
     """PAG-0001, PAG-0002... El bloqueo evita que dos cobros tomen el mismo número."""
     cur.execute("SELECT MAX(TRY_CAST(SUBSTRING(numero_recibo, 5, 20) AS INT)) FROM PAGO WITH (UPDLOCK, HOLDLOCK) "

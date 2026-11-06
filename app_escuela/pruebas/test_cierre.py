@@ -23,7 +23,7 @@ class PruebaBaseApagada(PruebaConBaseQueSeDeshace):
             r = self.dueno.get("/reportes/deudores")
             self.assertEqual(r.status_code, 503)
             self.assertIn("Sin conexión con la base", texto(r))
-            api = self.dueno.get("/api/reportes/caja")
+            api = self.dueno.get("/api/cambios")
             self.assertEqual(api.status_code, 503)
             self.assertIn("No se pudo conectar", api.get_json()["error"])
 
@@ -44,7 +44,7 @@ class PruebaRendimiento(PruebaConBaseQueSeDeshace):
         alumno = consultar_uno("SELECT TOP 1 i.id_alumno FROM INSCRIPCION i")["id_alumno"]
         urls = ["/", "/alumnos", "/grupos", "/caja", f"/caja/alumnos/{alumno}", "/mensualidades",
                 "/reportes/deudores?periodo=todos", "/reportes/caja?desde=2025-01-01&hasta=2030-12-31",
-                "/mi-grupo", "/horarios", "/tutores", "/api/reportes/caja"]
+                "/mi-grupo", "/horarios", "/tutores", "/api/cambios"]
         lentas = {}
         for url in urls:
             inicio = time.perf_counter()

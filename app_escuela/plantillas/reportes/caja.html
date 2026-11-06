@@ -20,13 +20,9 @@
   </form>
 </details>
 
-<div data-vivo="{{ refresco }}" id="caja-vivo" data-url-datos="{{ url_for('reportes.caja_api', desde=r.desde.isoformat(), hasta=r.hasta.isoformat()) }}">
+<div data-vivo="{{ refresco }}">
   {% include '_actualizado.html' %}
   <div class="resumen-alertas">
-    <section class="tarjeta">
-      <h2>Cobrado por método</h2>
-      <div class="grafico grafico-chico"><canvas id="grafico-caja" role="img" aria-label="Total cobrado por método de pago"></canvas></div>
-    </section>
     <section class="tarjeta">
       <h2>{{ 'Del ' ~ r.desde|fecha ~ ' al ' ~ r.hasta|fecha if r.desde != r.hasta else 'Del ' ~ r.desde|fecha }}</h2>
       <div class="total-caja"><span>Total cobrado</span><strong>{{ r.total|bs }}</strong></div>
@@ -67,8 +63,3 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-  <script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/graficos.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/reportes.js') }}"></script>
-{% endblock %}

@@ -54,7 +54,7 @@ class PruebasCobroRapido(AyudaCaja, PruebaConBaseQueSeDeshace):
         html = self.dueno.get("/caja?q=ma").get_data(as_text=True)
         self.assertIn('data-busqueda-vivo="#resultados"', html)
         self.assertIn('id="resultados"', html)
-        for ruta in ("/alumnos?q=ma", "/tutores?q=ma", "/inscribir?q=ma"):
+        for ruta in ("/alumnos?q=ma", "/tutores?q=ma"):
             self.assertIn('id="resultados"', self.dueno.get(ruta).get_data(as_text=True), ruta)
 
 

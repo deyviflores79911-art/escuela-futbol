@@ -48,13 +48,12 @@
         {{ opcion('caja.mensualidades', 'Mensualidades del mes', actual == 'caja.mensualidades') }}
         {{ opcion('reportes.caja', 'Resumen de caja', actual == 'reportes.caja') }}
         <p class="menu-titulo">Escuela</p>
-        {{ opcion('alumnos.inscribir_inicio', 'Inscribir', actual == 'alumnos.inscribir_inicio') }}
+        {{ opcion('alumnos.alumno_form', 'Inscribir', actual == 'alumnos.alumno_form' and not (request.view_args or {}).get('id_alumno')) }}
         {{ opcion('alumnos.lista', 'Alumnos', actual in ('alumnos.lista', 'alumnos.ficha', 'alumnos.alumno_form')) }}
         {{ opcion('alumnos.tutores', 'Tutores', actual.startswith('alumnos.tutor')) }}
         {{ opcion('catalogos.grupos', 'Grupos y categorías', actual in ('catalogos.grupos', 'catalogos.grupo', 'catalogos.grupo_form', 'catalogos.categorias', 'catalogos.categoria_form')) }}
         {{ opcion('catalogos.horarios', 'Horarios y lugares', actual in ('catalogos.horarios', 'catalogos.horario_form')) }}
-        {{ opcion('usuarios.lista', 'Entrenadores (usuarios)', actual.startswith('usuarios.')) }}
-        {{ opcion('reportes.mi_grupo', 'Mi grupo', actual == 'reportes.mi_grupo') }}
+        {{ opcion('usuarios.lista', 'Entrenadores', actual.startswith('usuarios.')) }}
       {% else %}
         {{ opcion('reportes.mi_grupo', 'Mi grupo', actual == 'reportes.mi_grupo') }}
       {% endif %}
@@ -91,7 +90,7 @@
     {% if es_dueno %}
       {% set nuevo_alumno = actual == 'alumnos.alumno_form' and not (request.view_args or {}).get('id_alumno') %}
       {{ pestana('caja.caja', 'billetera', 'Cobrar', actual in ('caja.caja', 'caja.cuenta', 'caja.cobrar', 'caja.recibo')) }}
-      {{ pestana('alumnos.inscribir_inicio', 'persona-mas', 'Inscribir', actual == 'alumnos.inscribir_inicio' or nuevo_alumno) }}
+      {{ pestana('alumnos.alumno_form', 'persona-mas', 'Inscribir', nuevo_alumno) }}
       {{ pestana('alumnos.lista', 'personas', 'Alumnos', actual in ('alumnos.lista', 'alumnos.ficha') or (actual == 'alumnos.alumno_form' and not nuevo_alumno)) }}
     {% else %}
       {{ pestana('reportes.mi_grupo', 'personas', 'Mi grupo', actual == 'reportes.mi_grupo') }}

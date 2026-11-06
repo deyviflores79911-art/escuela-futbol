@@ -1,7 +1,7 @@
 """Reportes en vivo: deudores y resumen de caja (dueño) y "Mi grupo" (entrenador y dueño)."""
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, g, jsonify, render_template, request
+from flask import Blueprint, g, render_template, request
 
 from datos import pagos, reportes
 from datos.catalogos import orden_categoria
@@ -57,16 +57,6 @@ def caja():
               ("Este mes", inicio_mes, hoy), ("Mes anterior", fin_mes_anterior.replace(day=1), fin_mes_anterior)]
     return render_template("reportes/caja.html", r=reportes.resumen_caja(desde, hasta), atajos=atajos,
                            refresco=SEGUNDOS_REFRESCO, ahora=datetime.now())
-
-
-@bp.route("/api/reportes/caja")
-@solo_dueno
-def caja_api():
-    """Totales por método del rango pedido (para el gráfico; se refresca con la pantalla)."""
-    r = reportes.resumen_caja(*_rango_caja())
-    return jsonify({"desde": r["desde"].isoformat(), "hasta": r["hasta"].isoformat(), "total": float(r["total"]),
-                    "por_metodo": [{"metodo": m["metodo"], "cantidad": m["cantidad"], "total": float(m["total"])}
-                                   for m in r["por_metodo"]]})
 
 
 @bp.route("/mi-grupo")

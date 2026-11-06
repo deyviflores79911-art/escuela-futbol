@@ -37,9 +37,8 @@ def _datos_tutor(form, errores, prefijo="", whatsapp_obligatorio=False):
 @bp.route("/inscribir")
 @solo_dueno
 def inscribir_inicio():
-    """Punto de entrada de "Inscribir": alumno nuevo (un solo formulario) o buscar uno que ya está registrado."""
-    q = (request.args.get("q") or "").strip()[:60]
-    return render_template("alumnos/inscribir.html", q=q, encontrados=alumnos.buscar_alumnos(q, "ACTIVO") if q else [])
+    """Dirección vieja de "Inscribir": ahora va directo al formulario de alumno nuevo."""
+    return redirect(url_for("alumnos.alumno_form"))
 
 
 # ---------------------------------------------------------------- Alumnos
@@ -170,7 +169,8 @@ def beca(id_alumno):
 def alumno_estado(id_alumno):
     try:
         nuevo = alumnos.cambiar_estado_alumno(id_alumno)
-        flash("Alumno activado." if nuevo == "ACTIVO" else "Alumno desactivado.", "ok")
+        flash("Alumno activado. Inscríbelo en su grupo." if nuevo == "ACTIVO"
+              else "Alumno dado de baja de la escuela. Su historial y sus pagos se conservan.", "ok")
     except ErrorDatos as e:
         flash(str(e), "error")
     return redirect(url_for("alumnos.ficha", id_alumno=id_alumno))

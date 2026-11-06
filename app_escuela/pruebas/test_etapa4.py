@@ -86,8 +86,6 @@ class PruebasEtapa4(AyudaCaja, PruebaConBaseQueSeDeshace):
         transfer_antes = next(x for x in antes["por_metodo"] if x["metodo"] == "Transferencia")
         self.assertEqual(transfer["total"], transfer_antes["total"] + Decimal("100"))
         self.assertEqual(sum(x["total"] for x in r["por_metodo"]), r["total"])
-        api = self.dueno.get(f"/api/reportes/caja?desde={hoy}&hasta={hoy}").get_json()
-        self.assertAlmostEqual(api["total"], float(r["total"]), places=2)
         t = texto(self.dueno.get(f"/reportes/caja?desde={hoy}&hasta={hoy}"))
         self.assertIn(p1["numero_recibo"], t)
         self.assertIn("no se suma", t)
@@ -135,7 +133,7 @@ class PruebasEtapa4(AyudaCaja, PruebaConBaseQueSeDeshace):
 
     def test_entrenador_no_ve_reportes_del_dueno(self):
         _, c = self.entrenador()
-        for url in ("/reportes/deudores", "/reportes/caja", "/api/reportes/caja"):
+        for url in ("/reportes/deudores", "/reportes/caja"):
             self.assertEqual(c.get(url).status_code, 403, url)
 
     # --------------------------------------------------------------- en vivo
@@ -144,8 +142,7 @@ class PruebasEtapa4(AyudaCaja, PruebaConBaseQueSeDeshace):
         for url in ("/reportes/deudores", "/reportes/caja", "/mi-grupo"):
             html = self.dueno.get(url).get_data(as_text=True)
             self.assertRegex(html, r'data-vivo="\d+"', url)
-            self.assertIn("data-hace", html)
-            self.assertIn("data-actualizar", html)
+            self.assertIn("data-sin-conexion", html, "si se corta la conexión, avisa")
 
     def test_refresco_automatico_no_cuenta_como_actividad(self):
         """Con una pantalla abierta que se refresca sola, la sesión igual se cierra por inactividad."""

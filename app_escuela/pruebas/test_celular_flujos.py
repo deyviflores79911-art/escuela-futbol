@@ -81,7 +81,7 @@ class PruebasFlujosCelular(PruebaConBaseQueSeDeshace):
         for esperado in ("Cobrar", "Inscribir", "Deudores", "Cobrado hoy"):
             self.assertIn(esperado, t)
         self.assertNotIn("Análisis de datos", t, "la app ya no tiene la parte de análisis")
-        self.assertEqual(self.dueno.get("/inscribir").status_code, 200)
+        self.assertEqual(self.dueno.get("/inscribir").headers["Location"], "/alumnos/nuevo", "Inscribir va directo al formulario")
 
     def test_entrenador_ve_su_inicio_sin_caja(self):
         e = consultar_uno("SELECT TOP 1 u.id_usuario FROM USUARIO u JOIN ROL r ON r.id_rol = u.id_rol "
